@@ -19,18 +19,23 @@ export async function GET(_req: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'investigation not found' }, { status: 404 });
   }
 
-  const [{ data: actions }, { data: signal }, { services }] = await Promise.all([
+  const [{ data: actions }, { data: signal }, { services }, { data: matches }] = await Promise.all([
     admin.from('actions').select('*').eq('investigation_id', id).order('rank', { ascending: true }),
     admin.from('signals').select('*').eq('id', investigation.signal_id).single(),
     getDetroitInventory(),
+    admin.from('signal_matches').select('service_slug').eq('signal_id', investigation.signal_id),
   ]);
 
   const service = services.find((s) => s.slug === investigation.service_slug) ?? null;
+  const otherAffectedServices = [
+    ...new Set((matches ?? []).map((m) => m.service_slug).filter((slug) => slug !== investigation.service_slug)),
+  ];
 
   return NextResponse.json({
     investigation,
     actions: actions ?? [],
     signal: signal ?? null,
     service,
+    other_affected_services: otherAffectedServices,
   });
 }
