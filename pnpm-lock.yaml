@@ -30,6 +30,15 @@ importers:
       '@base-ui/react':
         specifier: ^1.8.0
         version: 1.8.0(@types/react@19.3.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@dcr/impact':
+        specifier: workspace:*
+        version: link:../../packages/impact
+      '@dcr/investigate':
+        specifier: workspace:*
+        version: link:../../packages/investigate
+      '@dcr/signals':
+        specifier: workspace:*
+        version: link:../../packages/signals
       '@supabase/supabase-js':
         specifier: ^2.49.0
         version: 2.116.0
@@ -111,7 +120,30 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.1)
 
-  packages/investigate: {}
+  packages/investigate:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.80.0
+        version: 0.80.0(zod@3.25.76)
+      '@dcr/impact':
+        specifier: workspace:*
+        version: link:../impact
+      '@dcr/signals':
+        specifier: workspace:*
+        version: link:../signals
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+    devDependencies:
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.1)
 
   packages/signals:
     dependencies:

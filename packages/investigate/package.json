@@ -4,6 +4,25 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./llm": "./src/llm.ts",
+    "./skills": "./src/skills.ts",
+    "./agent": "./src/agent.ts",
+    "./constants": "./src/constants.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
+    "@dcr/impact": "workspace:*",
+    "@dcr/signals": "workspace:*",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.0",
+    "typescript": "^5",
+    "vitest": "^3.2.0"
   }
 }

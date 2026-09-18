@@ -13,6 +13,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
     "@base-ui/react": "^1.8.0",
+    "@dcr/impact": "workspace:*",
+    "@dcr/investigate": "workspace:*",
+    "@dcr/signals": "workspace:*",
     "@supabase/supabase-js": "^2.49.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
