@@ -1,0 +1,103 @@
+# service_slug -> infrastructure_slug. Exactly one level: a city service
+# depends on shared infrastructure, never on another service, and
+# infrastructure never depends on infrastructure. That constraint is what
+# keeps the blast radius panel a two-box, one-line reveal instead of a graph.
+#
+# rationale is one sentence, written to be read aloud — these get spoken
+# during a live investigation.
+#
+# criticality: 'hard' means the service is unavailable if this fails.
+# 'soft' means it degrades. Every service needs at least the possibility of
+# a soft edge showing up in a real investigation, so the system can
+# correctly NOT escalate something — see the soft edge on 911 below.
+
+- service_slug: 911-emergency-communications
+  infrastructure_slug: remote-access
+  kind: reachable-via
+  criticality: hard
+  rationale: >
+    Dispatch reaches its systems through the remote access tier. If remote
+    access is unavailable or compromised, dispatch is affected.
+
+- service_slug: 911-emergency-communications
+  infrastructure_slug: identity
+  kind: authenticates-via
+  criticality: hard
+  rationale: >
+    Call takers sign in through city identity.
+
+- service_slug: 911-emergency-communications
+  infrastructure_slug: network-core
+  kind: routes-over
+  criticality: hard
+  rationale: >
+    Emergency call delivery routes over the city network core.
+
+- service_slug: 911-emergency-communications
+  infrastructure_slug: records-management
+  kind: reads-from
+  criticality: soft
+  rationale: >
+    Dispatch pulls incident history from records management. Loss degrades
+    context, it does not stop dispatch.
+
+- service_slug: police
+  infrastructure_slug: remote-access
+  kind: reachable-via
+  criticality: hard
+  rationale: >
+    Officer support systems and mobile data terminals connect through the
+    remote access tier.
+
+- service_slug: police
+  infrastructure_slug: records-management
+  kind: reads-from
+  criticality: soft
+  rationale: >
+    Records lookup for officers degrades if records management is
+    unavailable, without stopping active response.
+
+- service_slug: water
+  infrastructure_slug: network-core
+  kind: routes-over
+  criticality: hard
+  rationale: >
+    Billing and operational monitoring systems route over the city network
+    core.
+
+- service_slug: water
+  infrastructure_slug: remote-access
+  kind: reachable-via
+  criticality: soft
+  rationale: >
+    Vendor support sessions for operational monitoring use the remote access
+    tier on an as-needed basis.
+
+- service_slug: payments
+  infrastructure_slug: identity
+  kind: authenticates-via
+  criticality: hard
+  rationale: >
+    Staff processing payments sign in through city identity.
+
+- service_slug: payments
+  infrastructure_slug: remote-access
+  kind: reachable-via
+  criticality: soft
+  rationale: >
+    Payment platform vendor support connects through the remote access tier.
+
+- service_slug: courts
+  infrastructure_slug: identity
+  kind: authenticates-via
+  criticality: hard
+  rationale: >
+    Court staff sign in through city identity to access case systems.
+
+- service_slug: courts
+  infrastructure_slug: records-management
+  kind: reads-from
+  criticality: hard
+  rationale: >
+    Case lookup and e-filing depend directly on the records management
+    system.

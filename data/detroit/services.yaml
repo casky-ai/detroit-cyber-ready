@@ -1,0 +1,143 @@
+# Twelve city services. 911 sits in its own life-safety tier above everything
+# else — see plans/001_prd.md, "911 is the anchor". It renders as one box,
+# same as every other service; there is no on-screen decomposition.
+#
+# resident_impact is authored, not computed, and is shown to the CISO
+# verbatim. Each sentence is written to be read aloud.
+#
+# Locations for lat/lon are approximate public facility locations (city hall,
+# DPD headquarters, etc.) and are for map placement only — see
+# scripts/pull-detroit-geo.ts for the real, committed GeoJSON this eventually
+# comes from.
+
+- slug: 911-emergency-communications
+  name: 911 Emergency Communications
+  department: Detroit Public Safety / ITS
+  criticality: life-safety
+  impact_unit: dispatch delay and response time
+  resident_impact: >
+    Potential disruption to emergency call handling, dispatch, and response times.
+  externally_exposed: false
+  lat: 42.3298
+  lon: -83.0458
+
+- slug: police
+  name: Police
+  department: Detroit Police Department
+  criticality: critical
+  resident_impact: >
+    Potential disruption to non-emergency reporting, records lookup, and
+    officer support systems.
+  externally_exposed: false
+  lat: 42.3299
+  lon: -83.0459
+
+- slug: water
+  name: Water
+  department: Detroit Water and Sewerage Department
+  criticality: critical
+  resident_impact: >
+    Potential disruption to water billing, service requests, and operational
+    monitoring systems.
+  externally_exposed: true
+  lat: 42.3357
+  lon: -83.0459
+
+- slug: ddot
+  name: DDOT
+  department: Detroit Department of Transportation
+  criticality: high
+  resident_impact: >
+    Potential disruption to bus tracking, route information, and rider
+    payment systems.
+  externally_exposed: true
+  lat: 42.3300
+  lon: -83.0430
+
+- slug: payments
+  name: Payments
+  department: Office of the CFO
+  criticality: high
+  resident_impact: >
+    Potential disruption to resident bill pay, permits, and fee payment
+    processing.
+  externally_exposed: true
+  lat: 42.3317
+  lon: -83.0468
+
+- slug: courts
+  name: Courts
+  department: 36th District Court
+  criticality: high
+  resident_impact: >
+    Potential disruption to case lookup, e-filing, and court scheduling
+    systems.
+  externally_exposed: true
+  lat: 42.3312
+  lon: -83.0498
+
+- slug: child-support
+  name: Child Support
+  department: Friend of the Court
+  criticality: moderate
+  resident_impact: >
+    Potential disruption to case status lookup and payment processing for
+    child support services.
+  externally_exposed: true
+  lat: 42.3310
+  lon: -83.0495
+
+- slug: public-health
+  name: Public Health
+  department: Detroit Health Department
+  criticality: high
+  resident_impact: >
+    Potential disruption to clinic scheduling, vital records requests, and
+    public health reporting.
+  externally_exposed: true
+  lat: 42.3400
+  lon: -83.0553
+
+- slug: public-works
+  name: Public Works
+  department: Department of Public Works
+  criticality: moderate
+  resident_impact: >
+    Potential disruption to service request tracking for street, sidewalk,
+    and infrastructure issues.
+  externally_exposed: true
+  lat: 42.3378
+  lon: -83.0421
+
+- slug: elections
+  name: Elections
+  department: Department of Elections
+  criticality: high
+  resident_impact: >
+    Potential disruption to voter registration lookup and polling place
+    information ahead of an election.
+  externally_exposed: true
+  lat: 42.3316
+  lon: -83.0466
+
+- slug: parks
+  name: Parks
+  department: General Services Department
+  criticality: low
+  resident_impact: >
+    Potential disruption to park facility reservations and program
+    registration.
+  externally_exposed: true
+  lat: 42.3467
+  lon: -83.0524
+
+- slug: libraries
+  name: Libraries
+  department: Detroit Public Library
+  criticality: low
+  resident_impact: >
+    Potential disruption to catalog search, account access, and digital
+    lending services.
+  externally_exposed: true
+  lat: 42.3593
+  lon: -83.0670

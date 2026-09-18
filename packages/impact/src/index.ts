@@ -1,1 +1,2 @@
-// @dcr/impact
+export * from './data';
+

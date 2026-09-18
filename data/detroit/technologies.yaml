@@ -1,0 +1,72 @@
+# The one simulated layer: which vendor and product each service or piece of
+# shared infrastructure runs. Matched against live threat intelligence by
+# packages/impact's exposure matcher (CPE, then vendor+product, then
+# advisory keyword).
+#
+# Attaches to exactly one of service_slug or infrastructure_slug, never both.
+#
+# The remote-access row below is deliberately the same vendor/product/CPE
+# used in the CISA KEV, NVD, and synthetic surface fixtures throughout this
+# codebase (see packages/signals/__tests__/contract/sources.contract.test.ts
+# and data/detroit/surface/t0.json) — that is what lets a single CVE trace
+# all the way from a live feed to a scored, prioritized 911 investigation.
+
+# --- Shared infrastructure ---
+
+- infrastructure_slug: remote-access
+  vendor: Ivanti
+  product: Connect Secure
+  version: 22.6R1
+  cpe: "cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*"
+  exposure: internet-facing
+
+- infrastructure_slug: identity
+  vendor: Okta
+  product: Workforce Identity
+  version: null
+  cpe: null
+  exposure: internal
+
+- infrastructure_slug: network-core
+  vendor: Cisco
+  product: Catalyst 9000
+  version: null
+  cpe: null
+  exposure: internal
+
+- infrastructure_slug: records-management
+  vendor: Tyler Technologies
+  product: Records Management
+  version: 8.4.0
+  cpe: null
+  exposure: internal
+
+# --- Service-owned technology ---
+
+- service_slug: 911-emergency-communications
+  vendor: Motorola Solutions
+  product: CAD Web Portal
+  version: 9.2.1
+  cpe: null
+  exposure: partner-network
+
+- service_slug: payments
+  vendor: Tyler Technologies
+  product: Payment Portal
+  version: 5.1.2
+  cpe: null
+  exposure: internet-facing
+
+- service_slug: water
+  vendor: Oracle
+  product: Utilities Customer Care and Billing
+  version: 2.8.1
+  cpe: null
+  exposure: internet-facing
+
+- service_slug: courts
+  vendor: Tyler Technologies
+  product: Odyssey Case Manager
+  version: "2024.2"
+  cpe: null
+  exposure: internet-facing

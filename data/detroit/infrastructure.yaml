@@ -1,0 +1,34 @@
+# Shared city infrastructure. Deliberately small — four entries, never more.
+# This is the whole second tier of the dependency model. It is never drawn
+# on the city map; it exists only as the thing city services point at in
+# dependencies.yaml.
+#
+# See plans/001_prd.md, "911 is the anchor", point 3.
+
+- slug: remote-access
+  name: Remote Access
+  description: >
+    VPN and remote administration infrastructure used by IT staff and vendor
+    support across city departments.
+  exposure: internet-facing
+
+- slug: identity
+  name: Identity
+  description: >
+    Citywide authentication: employee sign-in, single sign-on, and access
+    control used by every department-facing application.
+  exposure: internal
+
+- slug: network-core
+  name: Network Core
+  description: >
+    The city's core network fabric that carries traffic between departments,
+    facilities, and externally-facing services.
+  exposure: internal
+
+- slug: records-management
+  name: Records Management
+  description: >
+    Shared records and case history storage used by multiple departments for
+    lookups and reporting.
+  exposure: internal
