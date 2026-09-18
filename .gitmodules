@@ -1,0 +1,3 @@
+[submodule "upstream/skills"]
+	path = upstream/skills
+	url = https://github.com/mukul975/Anthropic-Cybersecurity-Skills.git
