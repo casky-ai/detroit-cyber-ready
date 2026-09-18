@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { MODEL_HAIKU, MODEL_SONNET, streamText, callStructured } from './llm';
 import { keywordsFor, narrowSkills, type NarrowedSkill } from './skills';
 import { COMPLETE_MARKER } from './constants';
+import { fetchCaskyEnrichment, type CaskyEnrichment } from './casky';
 
 export interface InvestigationInput {
   match: SignalMatch;
@@ -26,6 +27,7 @@ export interface InvestigationInput {
 
 export type InvestigationStepName =
   | 'context-assembled'
+  | 'context-enriched'
   | 'technique-assessed'
   | 'skills-selected'
   | 'impact-correlated'
@@ -53,6 +55,7 @@ export interface InvestigationResult {
   narrative: string;
   actions: ActionItem[];
   selectedSkills: NarrowedSkill[];
+  caskyEnrichment: CaskyEnrichment;
   /** True if either LLM call had to fall back to the deterministic path. */
   degraded: boolean;
   gaps: string[];
@@ -104,7 +107,11 @@ Output ONLY a JSON array, nothing else — no markdown fences, no commentary. Be
 
 Order by urgency, most urgent first. Ground every action in the specific vendor, product, service, and dependency named in the input. The first action is always about validating the exposure is real before remediating it.`;
 
-function buildUserContext(input: InvestigationInput, selectedSkills: NarrowedSkill[]): string {
+function buildUserContext(
+  input: InvestigationInput,
+  selectedSkills: NarrowedSkill[],
+  caskyEnrichment: CaskyEnrichment
+): string {
   const { match, service, risk } = input;
   return JSON.stringify(
     {
@@ -139,6 +146,17 @@ function buildUserContext(input: InvestigationInput, selectedSkills: NarrowedSki
         components: risk.components,
       },
       candidate_response_skills: selectedSkills.map((s) => s.name),
+      // Only included when Casky's platform genuinely has something to
+      // say about this CVE — an empty/unavailable lookup contributes
+      // nothing here rather than an empty placeholder the model might
+      // otherwise try to comment on.
+      casky_platform_context: caskyEnrichment.spotlight
+        ? {
+            existing_analysis: caskyEnrichment.spotlight.ai_analysis,
+            known_technique_ids: caskyEnrichment.spotlight.technique_ids,
+          }
+        : null,
+      matching_playbooks: caskyEnrichment.playbooks.map((p) => p.name),
     },
     null,
     2
@@ -174,6 +192,18 @@ export async function runInvestigation(
     })
   );
 
+  const caskyEnrichment = await fetchCaskyEnrichment(input.match.signal.external_id);
+  gaps.push(...caskyEnrichment.gaps);
+  options.onStep?.(
+    step(
+      'context-enriched',
+      caskyEnrichment.spotlight
+        ? 'Found existing Casky analysis for this CVE'
+        : 'No existing Casky analysis available for this CVE',
+      { hasSpotlight: Boolean(caskyEnrichment.spotlight), playbookCount: caskyEnrichment.playbooks.length }
+    )
+  );
+
   options.onStep?.(step('technique-assessed', describeExposure(input)));
 
   const keywords = keywordsFor(
@@ -203,7 +233,7 @@ export async function runInvestigation(
     })
   );
 
-  const userContext = buildUserContext(input, selectedSkills);
+  const userContext = buildUserContext(input, selectedSkills, caskyEnrichment);
 
   let narrativeBody: string;
   try {
@@ -253,5 +283,5 @@ export async function runInvestigation(
 
   const narrative = `${narrativeBody}\n\n---\n\n${COMPLETE_MARKER}\n`;
 
-  return { narrative, actions, selectedSkills, degraded, gaps };
+  return { narrative, actions, selectedSkills, caskyEnrichment, degraded, gaps };
 }

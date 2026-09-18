@@ -82,6 +82,7 @@ describe.skipIf(!hasKey)('runInvestigation against the live Anthropic API', () =
 
       expect(stepsFired).toEqual([
         'context-assembled',
+        'context-enriched',
         'technique-assessed',
         'skills-selected',
         'impact-correlated',
@@ -123,9 +124,17 @@ describe.skipIf(!hasKey)('runInvestigation against the live Anthropic API', () =
     }
   }, 60_000);
 
-  it('is not degraded when the live API is reachable and returns valid output', async () => {
+  it('is not degraded when the live Anthropic API is reachable and returns valid output', async () => {
     const result = await runInvestigation(DEMO_INPUT);
     expect(result.degraded).toBe(false);
-    expect(result.gaps).toEqual([]);
+    // A gap about Casky simply not having analyzed this CVE yet is
+    // expected and legitimate — CVE-2023-46805 genuinely has no spotlight
+    // in Casky's platform as of this writing (verified directly against
+    // the live endpoint). That is not the same as the AGENT degrading:
+    // `degraded` is reserved for the narrative or action-plan LLM calls
+    // themselves failing, which is what this test actually verifies.
+    for (const gap of result.gaps) {
+      expect(gap).toMatch(/^casky:/);
+    }
   }, 60_000);
 });

@@ -31,9 +31,18 @@ interface NvdResponse {
 }
 
 function firstCpe(item: NvdCveItem): string | null {
-  for (const node of item.cve.configurations ?? []) {
-    for (const match of node.cpeMatch ?? []) {
-      if (match.vulnerable) return match.criteria;
+  // NVD's shape is configurations[].nodes[].cpeMatch[] — three levels, not
+  // two. The previous version of this function treated `configurations[i]`
+  // as if it directly held `cpeMatch`, which it never does; this silently
+  // returned null for every real NVD response (masked because no test
+  // asserted on the extracted CPE value itself, only on generic contract
+  // properties). Caught by `next build`'s type check, which flagged
+  // `node.cpeMatch` as not existing on the configuration object's type.
+  for (const config of item.cve.configurations ?? []) {
+    for (const node of config.nodes ?? []) {
+      for (const match of node.cpeMatch ?? []) {
+        if (match.vulnerable) return match.criteria;
+      }
     }
   }
   return null;
