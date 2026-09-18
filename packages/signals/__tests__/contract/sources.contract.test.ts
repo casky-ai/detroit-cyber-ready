@@ -24,10 +24,10 @@ const FIXTURE_KEV_CATALOG = {
   count: 1,
   vulnerabilities: [
     {
-      cveID: 'CVE-2025-4427',
+      cveID: 'CVE-2023-46805',
       vendorProject: 'Ivanti',
       product: 'Connect Secure',
-      vulnerabilityName: 'Ivanti Connect Secure Authentication Bypass',
+      vulnerabilityName: 'Ivanti Connect Secure and Policy Secure Authentication Bypass Vulnerability',
       dateAdded: '2025-09-17',
       shortDescription: 'An authentication bypass vulnerability.',
       requiredAction: 'Apply mitigations per vendor instructions.',
@@ -40,7 +40,7 @@ const FIXTURE_NVD_RESPONSE = {
   vulnerabilities: [
     {
       cve: {
-        id: 'CVE-2025-4427',
+        id: 'CVE-2023-46805',
         published: '2025-09-16T12:00:00.000',
         descriptions: [{ lang: 'en', value: 'An authentication bypass vulnerability.' }],
         metrics: { cvssMetricV31: [{ cvssData: { baseScore: 8.2 } }] },
@@ -50,7 +50,7 @@ const FIXTURE_NVD_RESPONSE = {
               {
                 cpeMatch: [
                   {
-                    criteria: 'cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*',
+                    criteria: 'cpe:2.3:a:ivanti:connect_secure:22.1:r1:*:*:*:*:*:*',
                     vulnerable: true,
                   },
                 ],

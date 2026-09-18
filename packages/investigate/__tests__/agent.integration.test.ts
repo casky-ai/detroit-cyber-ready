@@ -21,9 +21,9 @@ const DEMO_INPUT: InvestigationInput = {
     signal: {
       source: 'cisa-kev',
       provenance: 'live',
-      external_id: 'CVE-2025-4427',
+      external_id: 'CVE-2023-46805',
       kind: 'kev-addition',
-      title: 'Ivanti Connect Secure Authentication Bypass',
+      title: 'Ivanti Connect Secure and Policy Secure Authentication Bypass Vulnerability',
       summary: 'An authentication bypass vulnerability in Ivanti Connect Secure.',
       published_at: '2025-09-17T00:00:00.000Z',
       severity: null,
@@ -93,8 +93,14 @@ describe.skipIf(!hasKey)('runInvestigation against the live Anthropic API', () =
       expect(chunks.join('').length).toBeGreaterThan(0);
 
       // Language discipline: never claim an active, confirmed breach.
+      // Note: "not a confirmed breach" is the CORRECT, desired phrasing (the
+      // model explicitly disclaiming one) — only an unnegated affirmative
+      // claim is a violation. A prior version of this check flagged the
+      // substring "confirmed breach" regardless of a preceding "not," which
+      // failed on output that was actually doing exactly the right thing.
       const lower = result.narrative.toLowerCase();
-      expect(lower).not.toMatch(/being hacked|hacked in real.?time|confirmed breach/);
+      expect(lower).not.toMatch(/being hacked|hacked in real.?time/);
+      expect(lower).not.toMatch(/(?<!not a |not been |isn't a |is not a )confirmed breach/);
 
       // Should mention the concrete vendor/product/service named in the input.
       expect(result.narrative).toMatch(/ivanti|connect secure/i);

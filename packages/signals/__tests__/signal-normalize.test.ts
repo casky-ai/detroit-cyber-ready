@@ -6,7 +6,7 @@ function makeSignal(overrides: Partial<RawSignal> = {}): RawSignal {
   return {
     source: 'cisa-kev',
     provenance: 'live',
-    external_id: 'CVE-2025-4427',
+    external_id: 'CVE-2023-46805',
     kind: 'kev-addition',
     title: 'Ivanti Connect Secure vulnerability',
     summary: null,
@@ -35,7 +35,7 @@ describe('fingerprintSignal', () => {
   });
 
   it('differs when the underlying identity differs', () => {
-    const a = fingerprintSignal(makeSignal({ external_id: 'CVE-2025-4427' }));
+    const a = fingerprintSignal(makeSignal({ external_id: 'CVE-2023-46805' }));
     const b = fingerprintSignal(makeSignal({ external_id: 'CVE-2025-9999' }));
     expect(a).not.toBe(b);
   });
@@ -57,7 +57,7 @@ describe('dedupeSignals', () => {
   });
 
   it('keeps distinct signals distinct', () => {
-    const a = makeSignal({ external_id: 'CVE-2025-4427' });
+    const a = makeSignal({ external_id: 'CVE-2023-46805' });
     const b = makeSignal({ external_id: 'CVE-2025-9999' });
     expect(dedupeSignals([a, b])).toHaveLength(2);
   });

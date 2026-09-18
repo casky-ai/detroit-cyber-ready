@@ -87,7 +87,7 @@ describe('feed degradation', () => {
 
   it('epss: a network failure yields a gap, not a throw', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('connection reset')));
-    const result = await pollForCves(['CVE-2025-4427']);
+    const result = await pollForCves(['CVE-2023-46805']);
     expect(result.signals).toEqual([]);
     expect(result.gaps.length).toBeGreaterThan(0);
   });

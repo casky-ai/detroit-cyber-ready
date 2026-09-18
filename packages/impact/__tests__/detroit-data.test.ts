@@ -51,7 +51,7 @@ describe('Detroit inventory data', () => {
     expect(dependents.length).toBeGreaterThan(1);
   });
 
-  it('the remote-access technology matches the CVE-2025-4427 fixture used across the test suite', async () => {
+  it('the remote-access technology matches the CVE-2023-46805 fixture used across the test suite', async () => {
     const { technologies } = await loadDetroitInventory();
     const remoteAccess = technologies.find((t) => t.infrastructure_slug === 'remote-access');
     expect(remoteAccess?.vendor).toBe('Ivanti');

@@ -23,7 +23,14 @@ export const CityServiceSchema = z.object({
   name: z.string().min(1),
   department: z.string().min(1),
   criticality: CriticalityTierSchema,
-  impact_unit: z.string().nullable().optional().default(null),
+  // .nullable().default(null), no .optional(): the key may be entirely
+  // absent from a service's YAML entry (most are) or explicitly null,
+  // and .default() already covers both cases. Stacking .optional() on
+  // top makes zod's inferred TS type carry `| undefined` even though the
+  // value can never actually be undefined at runtime, which fails a
+  // stricter downstream type check (`next build`'s tsc pass) even though
+  // vitest — which doesn't type-check — never catches it.
+  impact_unit: z.string().nullable().default(null),
   resident_impact: z.string().min(1),
   externally_exposed: z.boolean(),
   lat: z.number(),
@@ -57,18 +64,17 @@ const VersionLikeSchema = z
   .union([z.string(), z.number()])
   .transform((v) => String(v))
   .nullable()
-  .optional()
   .default(null);
 
 // Attaches to exactly one of service_slug or infrastructure_slug.
 export const TechnologySchema = z
   .object({
-    service_slug: z.string().min(1).nullable().optional().default(null),
-    infrastructure_slug: z.string().min(1).nullable().optional().default(null),
+    service_slug: z.string().min(1).nullable().default(null),
+    infrastructure_slug: z.string().min(1).nullable().default(null),
     vendor: z.string().min(1),
     product: z.string().min(1),
     version: VersionLikeSchema,
-    cpe: z.string().nullable().optional().default(null),
+    cpe: z.string().nullable().default(null),
     exposure: z.enum(['internet-facing', 'partner-network', 'internal']),
   })
   .refine(
@@ -77,7 +83,16 @@ export const TechnologySchema = z
   );
 export type Technology = z.infer<typeof TechnologySchema>;
 
-async function loadYaml<T>(fileName: string, schema: z.ZodType<T>): Promise<T[]> {
+// Generic over the schema's own concrete type (S extends ZodTypeAny) and
+// deriving the return type via z.infer<S>, rather than accepting
+// z.ZodType<T> and inferring T from that abstract base. The latter looks
+// equivalent but is NOT: inferring through ZodType<T>'s output position
+// loses precision for schemas built from chained combinators
+// (.nullable().default(...)), silently widening fields to include
+// `| undefined` even though z.infer<typeof schema> computed directly (as
+// every exported *Schema type alias in this file does) is exact. Caught by
+// `next build`'s tsc pass, which type-checks; vitest does not.
+async function loadYaml<S extends z.ZodTypeAny>(fileName: string, schema: S): Promise<z.infer<S>[]> {
   const raw = await readFile(path.join(DATA_DIR, fileName), 'utf-8');
   const parsed = parseYaml(raw);
   if (!Array.isArray(parsed)) {
@@ -88,7 +103,7 @@ async function loadYaml<T>(fileName: string, schema: z.ZodType<T>): Promise<T[]>
     if (!result.success) {
       throw new Error(`${fileName}[${i}]: ${result.error.message}`);
     }
-    return result.data;
+    return result.data as z.infer<S>;
   });
 }
 

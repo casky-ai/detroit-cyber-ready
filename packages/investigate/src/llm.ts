@@ -24,7 +24,16 @@ function getClient(): Anthropic {
     if (!apiKey) {
       throw new Error('ANTHROPIC_API_KEY is not set');
     }
-    client = new Anthropic({ apiKey });
+    // maxRetries: 0 is deliberate, not an oversight. The SDK's default retry
+    // behavior with exponential backoff can turn a single transient error
+    // (a 429 or 529) into several retries that together take minutes — which
+    // silently defeats every timeoutMs in this file. Discovered exactly this
+    // way: a "20 second" callStructured() call took over 700 seconds in
+    // practice because the SDK kept retrying underneath our abort signal.
+    // We already have our own degradation path (see agent.ts's try/catch
+    // and fallback narrative/actions) — the SDK retrying on top of that is
+    // strictly worse, not safer.
+    client = new Anthropic({ apiKey, maxRetries: 0 });
   }
   return client;
 }

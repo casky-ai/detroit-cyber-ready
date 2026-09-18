@@ -7,9 +7,9 @@ function makeSignal(): RawSignal {
   return {
     source: 'cisa-kev',
     provenance: 'live',
-    external_id: 'CVE-2025-4427',
+    external_id: 'CVE-2023-46805',
     kind: 'kev-addition',
-    title: 'Ivanti Connect Secure Authentication Bypass',
+    title: 'Ivanti Connect Secure and Policy Secure Authentication Bypass Vulnerability',
     summary: null,
     published_at: '2025-09-17T00:00:00.000Z',
     severity: null,

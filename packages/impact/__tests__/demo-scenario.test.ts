@@ -19,9 +19,9 @@ import { computeRiskScore } from '../src/scoring';
 const KEV_REMOTE_ACCESS_SIGNAL: RawSignal = {
   source: 'cisa-kev',
   provenance: 'live',
-  external_id: 'CVE-2025-4427',
+  external_id: 'CVE-2023-46805',
   kind: 'kev-addition',
-  title: 'Ivanti Connect Secure Authentication Bypass',
+  title: 'Ivanti Connect Secure and Policy Secure Authentication Bypass Vulnerability',
   summary: 'An authentication bypass vulnerability in Ivanti Connect Secure.',
   published_at: '2025-09-17T00:00:00.000Z',
   severity: null,
@@ -52,7 +52,7 @@ describe('demo scenario: KEV on remote access reaches 911', () => {
     const nvdEnriched: RawSignal = {
       ...KEV_REMOTE_ACCESS_SIGNAL,
       source: 'nvd',
-      cpe: 'cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*',
+      cpe: 'cpe:2.3:a:ivanti:connect_secure:22.1:r1:*:*:*:*:*:*',
     };
     const matches = matchSignalToAssets(nvdEnriched, technologies);
     const remoteAccessMatch = matches.find((m) => m.landedOn === 'remote-access');

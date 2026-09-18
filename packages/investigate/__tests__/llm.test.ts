@@ -7,6 +7,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 const streamMock = vi.fn();
 const createMock = vi.fn();
+const constructorOptionsCalls: unknown[] = [];
 
 vi.mock('@anthropic-ai/sdk', () => {
   class FakeAPIError extends Error {}
@@ -14,13 +15,36 @@ vi.mock('@anthropic-ai/sdk', () => {
     default: class FakeAnthropic {
       messages = { stream: streamMock, create: createMock };
       static APIError = FakeAPIError;
+      constructor(options: unknown) {
+        constructorOptionsCalls.push(options);
+      }
     },
   };
 });
 
 afterEach(() => {
   vi.clearAllMocks();
+  constructorOptionsCalls.length = 0;
   delete process.env.ANTHROPIC_API_KEY;
+});
+
+describe('getClient (via any call)', () => {
+  it('disables the SDK\'s own retry logic, so timeoutMs is a genuine hard wall', async () => {
+    // Regression test for a real incident: the SDK's default retry-with-
+    // backoff silently turned a 20-second callStructured() timeout into a
+    // 718-second call in practice, because our AbortController only
+    // cancelled one attempt while the SDK retried underneath it. Without
+    // maxRetries: 0, every timeoutMs in this file is a lie.
+    process.env.ANTHROPIC_API_KEY = 'test-key';
+    vi.resetModules();
+    const { streamText } = await import('../src/llm');
+
+    streamMock.mockImplementation(() => ({ on: () => {}, finalMessage: async () => ({}) }));
+    await streamText({ model: 'm', system: 's', user: 'u', maxTokens: 10, timeoutMs: 1000 });
+
+    expect(constructorOptionsCalls).toHaveLength(1);
+    expect(constructorOptionsCalls[0]).toMatchObject({ maxRetries: 0 });
+  });
 });
 
 describe('streamText', () => {

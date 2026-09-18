@@ -16,8 +16,8 @@
 - infrastructure_slug: remote-access
   vendor: Ivanti
   product: Connect Secure
-  version: 22.6R1
-  cpe: "cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*"
+  version: 22.1R1
+  cpe: "cpe:2.3:a:ivanti:connect_secure:22.1:r1:*:*:*:*:*:*"
   exposure: internet-facing
 
 - infrastructure_slug: identity

@@ -7,9 +7,9 @@ function makeSignal(overrides: Partial<RawSignal> = {}): RawSignal {
   return {
     source: 'cisa-kev',
     provenance: 'live',
-    external_id: 'CVE-2025-4427',
+    external_id: 'CVE-2023-46805',
     kind: 'kev-addition',
-    title: 'Ivanti Connect Secure Authentication Bypass',
+    title: 'Ivanti Connect Secure and Policy Secure Authentication Bypass Vulnerability',
     summary: null,
     published_at: '2025-09-17T00:00:00.000Z',
     severity: null,
@@ -29,8 +29,8 @@ function makeTech(overrides: Partial<Technology> = {}): Technology {
     infrastructure_slug: 'remote-access',
     vendor: 'Ivanti',
     product: 'Connect Secure',
-    version: '22.6R1',
-    cpe: 'cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*',
+    version: '22.1R1',
+    cpe: 'cpe:2.3:a:ivanti:connect_secure:22.1:r1:*:*:*:*:*:*',
     exposure: 'internet-facing',
     ...overrides,
   };
@@ -55,7 +55,7 @@ describe('normalizeVendorName', () => {
 
 describe('matchSignalToAssets: stage 1', () => {
   it('CPE match wins when both signal and technology carry a CPE, at confidence 0.95', () => {
-    const signal = makeSignal({ cpe: 'cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*' });
+    const signal = makeSignal({ cpe: 'cpe:2.3:a:ivanti:connect_secure:22.1:r1:*:*:*:*:*:*' });
     const matches = matchSignalToAssets(signal, [makeTech()]);
     expect(matches).toHaveLength(1);
     expect(matches[0].matchBasis).toBe('cpe');
@@ -113,9 +113,9 @@ describe('matchSignalToAssets: stage 1', () => {
   });
 
   it('records exactly what matched, for the audit trail', () => {
-    const signal = makeSignal({ cpe: 'cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*' });
+    const signal = makeSignal({ cpe: 'cpe:2.3:a:ivanti:connect_secure:22.1:r1:*:*:*:*:*:*' });
     const matches = matchSignalToAssets(signal, [makeTech()]);
-    expect(matches[0].matchedOn).toEqual({ cpe: 'cpe:2.3:a:ivanti:connect_secure:22.6r1:*:*:*:*:*:*:*' });
+    expect(matches[0].matchedOn).toEqual({ cpe: 'cpe:2.3:a:ivanti:connect_secure:22.1:r1:*:*:*:*:*:*' });
   });
 
   it('a technology with no CPE never matches an unrelated CPE-only signal', () => {
