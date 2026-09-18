@@ -2,7 +2,7 @@
 
 How Detroit Cyber Ready gets data, what is live today, and exactly what it takes to swap a simulated source for a real one.
 
-This document is also the architecture slide.
+It is the authoritative description of the system's boundary with the outside world.
 
 ---
 
@@ -58,7 +58,7 @@ export interface SurfaceSource {
 }
 ```
 
-`SyntheticSurfaceSource` reads committed snapshots from `data/detroit/surface/`. `ShodanSurfaceSource` and `CensysSurfaceSource` are committed stubs: the class shell, the config keys they will need, and a `throw new Error('not enabled')`. They exist so the swap point is visible in the repository rather than only on a slide.
+`SyntheticSurfaceSource` reads committed snapshots from `data/detroit/surface/`. `ShodanSurfaceSource` and `CensysSurfaceSource` are committed stubs: the class shell, the config keys they will need, and a `throw new Error('not enabled')`. They exist so the swap point is visible in the codebase rather than only in a design document.
 
 ### 3. `ContextEngineAdapter`, the enrichment side
 

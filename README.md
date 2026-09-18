@@ -12,15 +12,17 @@ Built for the Venture 313 AI Buildathon, September 2025.
 
 A city is responsible for keeping the digital services residents depend on available and trustworthy. Detroit Cyber Ready watches for external changes that put those services at risk, investigates them automatically, and tells the city's security team which service is affected and what to do next.
 
-911 Emergency Communications is the anchor. It is the sharpest example of that responsibility, and it is what the City of Detroit CISO told us he actually loses sleep over.
+911 Emergency Communications is the anchor. It is the sharpest example of that responsibility, and it is the service a municipal security team worries about first.
 
 ---
 
-## The problem, in the CISO's words
+## The problem
+
+A sitting municipal CISO described it this way:
 
 > "I have Tenable and other tools. I don't care about vulnerabilities. I want to be alerted if something is proactive."
 
-The City of Detroit already owns vulnerability scanners. What it does not own is the layer above them: something that watches the outside world, notices when a change out there makes an existing exposure suddenly urgent, investigates it without a human, and says which city service is at risk.
+A city of Detroit's size already owns vulnerability scanners, often more than one. What it does not own is the layer above them: something that watches the outside world, notices when a change out there makes an existing exposure suddenly urgent, investigates it without a human, and says which city service is at risk.
 
 > Tenable tells Detroit what is vulnerable. Detroit Cyber Ready tells Detroit when something changes that could matter right now, investigates it automatically, determines which city service could be affected, and tells the team what to do next.
 
