@@ -5,13 +5,16 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./data": "./src/data.ts"
+    "./data": "./src/data.ts",
+    "./exposure": "./src/exposure.ts",
+    "./scoring": "./src/scoring.ts"
   },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@dcr/signals": "workspace:*",
     "yaml": "^2.7.0",
     "zod": "^3.25.0"
   },

@@ -80,6 +80,9 @@ importers:
 
   packages/impact:
     dependencies:
+      '@dcr/signals':
+        specifier: workspace:*
+        version: link:../signals
       yaml:
         specifier: ^2.7.0
         version: 2.9.1
