@@ -57,11 +57,10 @@ We are explicit about this because a security product that overstates its inputs
 | Vulnerability context, CVSS, CPE | NVD | **Real, live** |
 | Exploitation probability | FIRST.org EPSS | **Real, live** |
 | Advisories | CISA | **Real, live** |
-| Detroit geography, districts, facility locations | data.detroitmi.gov | **Real** |
-| Department names and service catalog | data.detroitmi.gov | **Real** |
 | Which vendor and product each service runs | authored by us | **Simulated, labeled in the UI** |
 | Dependencies between services and infrastructure | authored by us | **Simulated, labeled in the UI** |
 | External attack surface observations | synthetic source | **Simulated, labeled in the UI** |
+| Service map coordinates, department names | authored by us, approximate | **Simulated** — pulling the real values from data.detroitmi.gov is a documented next step, not yet built |
 
 **We do not scan cities.** No system in this repository performs reconnaissance against City of Detroit infrastructure or any other real target. Every hostname in the seed data uses an RFC 2606 reserved domain and every address is inside an RFC 5737 documentation range, and there is a test that enforces it.
 

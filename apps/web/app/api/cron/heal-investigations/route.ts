@@ -75,3 +75,8 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ checked: rows?.length ?? 0, healed, failed, errors });
 }
+
+// Vercel Cron Jobs always issue a GET request (see apps/web/vercel.json's
+// crons entry for this path) — POST remains for manual/curl-driven runs
+// with a Bearer CRON_SECRET, same auth check either way.
+export const GET = POST;

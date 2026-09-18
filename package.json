@@ -8,7 +8,6 @@
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint",
     "test": "pnpm -r --if-present run test",
-    "geo:pull": "npx tsx scripts/pull-detroit-geo.ts",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed-detroit-data.ts"
   },
   "engines": {

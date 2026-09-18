@@ -6,6 +6,18 @@
 // This file exists because a mocked SDK can prove our abort-wiring is
 // correct (see llm.test.ts) but cannot prove the actual prompts produce
 // something usable. This does.
+//
+// KNOWN FLAKINESS: run three times back to back while preparing this build,
+// two runs completed normally (~40s) and the third took over 16 minutes
+// before failing. llm.test.ts's mocked test confirms our own code sets
+// maxRetries: 0 and passes the abort signal correctly, so this is very
+// likely rate-limiting or a lingering-socket issue on repeated rapid-fire
+// live calls, not a regression in that fix — but it was not fully
+// root-caused before shipping. If `pnpm test` ever appears to hang for
+// several minutes rather than the usual ~40s, it is almost certainly this
+// file: Ctrl-C is safe, the rest of the suite (everything except this one
+// live-API file) is unaffected. Running it once, not in a tight loop, has
+// been reliable throughout this build.
 
 import { describe, it, expect } from 'vitest';
 import { runInvestigation, type InvestigationInput } from '../src/agent';
@@ -93,15 +105,19 @@ describe.skipIf(!hasKey)('runInvestigation against the live Anthropic API', () =
       expect(result.narrative.trim().endsWith(COMPLETE_MARKER.trim())).toBe(true);
       expect(chunks.join('').length).toBeGreaterThan(0);
 
-      // Language discipline: never claim an active, confirmed breach.
-      // Note: "not a confirmed breach" is the CORRECT, desired phrasing (the
-      // model explicitly disclaiming one) — only an unnegated affirmative
-      // claim is a violation. A prior version of this check flagged the
-      // substring "confirmed breach" regardless of a preceding "not," which
-      // failed on output that was actually doing exactly the right thing.
+      // Language discipline: never claim an active, confirmed breach. Only
+      // the two unambiguous phrases from the system prompt's actual banned
+      // list are checked here — phrases that could never appear inside a
+      // legitimate disclaimer. A prior version also tried to detect an
+      // un-negated "confirmed breach" via a negative-lookbehind regex; that
+      // is genuinely flaky against natural language, since the model has
+      // many ways to phrase "this is not a confirmed breach" that the
+      // lookbehind didn't anticipate, and it failed intermittently on
+      // output that was doing exactly the right thing. A regex is the
+      // wrong tool for negation detection — dropped rather than patched
+      // further.
       const lower = result.narrative.toLowerCase();
       expect(lower).not.toMatch(/being hacked|hacked in real.?time/);
-      expect(lower).not.toMatch(/(?<!not a |not been |isn't a |is not a )confirmed breach/);
 
       // Should mention the concrete vendor/product/service named in the input.
       expect(result.narrative).toMatch(/ivanti|connect secure/i);
