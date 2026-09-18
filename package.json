@@ -8,11 +8,20 @@
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint",
     "test": "pnpm -r --if-present run test",
-    "geo:pull": "npx tsx scripts/pull-detroit-geo.ts"
+    "geo:pull": "npx tsx scripts/pull-detroit-geo.ts",
+    "db:seed": "dotenv -e .env.local -- tsx scripts/seed-detroit-data.ts"
   },
   "engines": {
     "node": ">=20",
     "pnpm": ">=10"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@10.32.1",
+  "dependencies": {
+    "@dcr/impact": "workspace:*",
+    "@supabase/supabase-js": "^2.49.0"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^8.0.0",
+    "tsx": "^4.19.0"
+  }
 }
