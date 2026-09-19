@@ -125,11 +125,32 @@ See [How it works](#how-it-works).
 It does the thing, live, at **https://detroit-cyber-ready-web.vercel.app**. The dashboard walks through six steps, all running on the real pipeline:
 
 1. **All clear:** the board shows 12 city services on a street map of Detroit.
+
+   ![Step 1: the dashboard with all 12 city services operational on a street map of Detroit.](docs/product/1-all-clear.png)
+
 2. **Signal:** a real CISA Known Exploited Vulnerabilities entry arrives.
+
+   ![Step 2: a new CISA KEV alert for CVE-2023-46805 with related intelligence, each item labeled live or simulated.](docs/product/2-signal.png)
+
 3. **Investigate:** five AI agents investigate in parallel, one per affected service, with real step timestamps.
+
+   ![Step 3: the 911 investigation's six steps with timestamps, and five agents reporting in parallel.](docs/product/3-investigate.png)
+
 4. **Risk identified:** the risk lands on the map at 911.
+
+   ![Step 4: the map with 911 and four other services marked critical, and a callout on 911.](docs/product/4-risk-identified.png)
+
 5. **Impact:** the impact analysis shows the score, the evidence, and the resident impact.
+
+   ![Step 5: impact analysis for 911, risk score 95 of 100, key findings, and resident impact.](docs/product/5-impact.png)
+
 6. **Act:** a ranked action plan with owners and deadlines, an incident ticket, and a CISO alert delivered to Slack.
+
+   ![Step 6: the ranked action plan with deadlines and owners, an incident ticket button, and the CISO alert.](docs/product/6-action-plan.png)
+
+   The CISO alert as it lands in Slack: priority, exposure path, the full action plan, findings, and a timeline, all read from the stored investigation.
+
+   ![The Slack CISO alert: P1, 911 Emergency Communications exposed, with the action plan, key findings, other affected services, and timeline.](docs/product/6-slack-alert.png)
 
 In our live runs, all five investigations complete in under a minute. 185 automated tests cover:
 

@@ -10,6 +10,7 @@ import type { BasemapLoad } from '@/components/city-map';
 import { ActionPlanCard, ImpactCard, type InvestigationDetail } from '@/components/impact-card';
 import { PageContainer } from '@/components/page-header';
 import { ResetDemoButton } from '@/components/reset-demo-button';
+import type { InvestigationStepName } from '@dcr/investigate/agent';
 import type { ServiceSummary, StepEvent } from '@/lib/api-types';
 import type { DemoInvestigationSeed, DemoStartResponse } from '@/lib/timeline-types';
 
@@ -27,9 +28,10 @@ const clock = (d: Date | string = new Date()) =>
 const clockSeconds = (d: Date | string) =>
   new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: DETROIT });
 
-// The agent's real step events, in the order it emits them.
-const STEPS: Array<{ key: string; label: string }> = [
-  { key: 'connected', label: 'Pick up the threat signal' },
+// The agent's real step events, in the order it emits them. Must match
+// InvestigationStepName in packages/investigate/src/agent.ts exactly: a
+// step listed here that the agent never emits would show as working forever.
+const STEPS: Array<{ key: InvestigationStepName; label: string }> = [
   { key: 'context-assembled', label: 'Analyze threat intelligence and indicators' },
   { key: 'context-enriched', label: 'Check the Casky platform for known playbooks' },
   { key: 'technique-assessed', label: 'Assess the exploitation technique and exposure' },
