@@ -8,12 +8,8 @@
 // returned investigation_id and runs all five live agents concurrently.
 
 import { NextResponse } from 'next/server';
-import { matchSignalToAssets, propagateToServices } from '@dcr/impact/exposure';
-import { computeRiskScore } from '@dcr/impact/scoring';
-import { fingerprintSignal } from '@dcr/signals/normalize';
 import type { RawSignal } from '@dcr/signals/contracts';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { getDetroitInventory } from '@/lib/detroit';
+import { NoDetroitExposureError, startSignalInvestigations } from '@/lib/start-signal-investigations';
 
 export const maxDuration = 30;
 
@@ -35,7 +31,9 @@ const DEMO_SIGNAL: RawSignal = {
   published_at: '2024-01-10T00:00:00.000Z',
   severity: null,
   vendor_project: 'Ivanti',
-  product: 'Connect Secure',
+  // CISA's exact product text for this CVE; the matcher finds 'Connect
+  // Secure' inside it as a whole phrase.
+  product: 'Connect Secure and Policy Secure',
   cpe: null,
   cvss_score: 8.2,
   epss_percentile: null,
@@ -51,123 +49,11 @@ const DEMO_SIGNAL: RawSignal = {
 };
 
 export async function POST() {
-  const admin = getAdminClient();
-  const { services, technologies, dependencies } = await getDetroitInventory();
-
-  const signalWithEpss: RawSignal = { ...DEMO_SIGNAL, epss_percentile: CAPTURED_EPSS_PERCENTILE };
-  const row = {
-    source: signalWithEpss.source,
-    provenance: signalWithEpss.provenance,
-    external_id: signalWithEpss.external_id,
-    fingerprint: fingerprintSignal(signalWithEpss),
-    kind: signalWithEpss.kind,
-    title: signalWithEpss.title,
-    summary: signalWithEpss.summary,
-    published_at: signalWithEpss.published_at,
-    severity: signalWithEpss.severity,
-    vendor_project: signalWithEpss.vendor_project,
-    product: signalWithEpss.product,
-    cpe: signalWithEpss.cpe,
-    cvss_score: signalWithEpss.cvss_score,
-    epss_percentile: CAPTURED_EPSS_PERCENTILE,
-    raw: signalWithEpss.raw,
-  };
-
-  const { data: signalRow, error: signalError } = await admin
-    .from('signals')
-    .upsert(row, { onConflict: 'fingerprint' })
-    .select('id')
-    .single();
-  if (signalError || !signalRow) {
-    return NextResponse.json(
-      { error: `failed to record demo signal: ${signalError?.message ?? 'no row returned'}` },
-      { status: 500 }
-    );
+  try {
+    const result = await startSignalInvestigations(DEMO_SIGNAL, CAPTURED_EPSS_PERCENTILE);
+    return NextResponse.json(result, { status: 201 });
+  } catch (err) {
+    const status = err instanceof NoDetroitExposureError ? 422 : 500;
+    return NextResponse.json({ error: err instanceof Error ? err.message : String(err) }, { status });
   }
-  const signalId = signalRow.id as string;
-
-  const assetMatches = matchSignalToAssets(signalWithEpss, technologies);
-  const allMatches = propagateToServices(assetMatches, dependencies);
-  if (allMatches.length === 0) {
-    return NextResponse.json({ error: 'no Detroit exposure: signal matched nothing' }, { status: 422 });
-  }
-
-  const matchRows = allMatches.map((m) => ({
-    signal_id: signalId,
-    landed_on: m.landedOn,
-    landed_kind: m.landedKind,
-    service_slug: m.serviceSlug,
-    match_basis: m.matchBasis,
-    matched_on: m.matchedOn,
-    hops: m.hops,
-    dependency: m.dependency,
-    provenance: 'synthetic' as const, // the CVE is real; the Detroit inventory it lands on is authored
-    confidence: m.confidence,
-  }));
-  const { error: matchError } = await admin
-    .from('signal_matches')
-    .upsert(matchRows, { onConflict: 'signal_id,landed_on,service_slug' });
-  if (matchError) {
-    return NextResponse.json({ error: `failed to record signal matches: ${matchError.message}` }, { status: 500 });
-  }
-
-  // One investigation row per affected service, all created up front so
-  // the frontend can open all five SSE connections at once.
-  const investigations = [];
-  for (const match of allMatches) {
-    const service = services.find((s) => s.slug === match.serviceSlug);
-    if (!service) continue;
-    const risk = computeRiskScore(match, service, CAPTURED_EPSS_PERCENTILE);
-
-    const { data: inv, error: invError } = await admin
-      .from('investigations')
-      .insert({
-        signal_id: signalId,
-        service_slug: service.slug,
-        status: 'queued',
-        context: { match },
-        risk_score: risk.score,
-        risk_components: risk.components,
-        priority: risk.priority,
-        escalated: risk.escalated,
-        escalation_reason: risk.escalationReason,
-      })
-      .select('id')
-      .single();
-    if (invError || !inv) {
-      return NextResponse.json(
-        { error: `failed to create investigation for ${service.slug}: ${invError?.message}` },
-        { status: 500 }
-      );
-    }
-
-    investigations.push({
-      investigation_id: inv.id as string,
-      service_slug: service.slug,
-      service_name: service.name,
-      landed_on: match.landedOn,
-      hops: match.hops,
-      dependency: match.dependency,
-      risk,
-    });
-  }
-
-  return NextResponse.json(
-    {
-      signal_id: signalId,
-      signal: {
-        external_id: signalWithEpss.external_id,
-        title: signalWithEpss.title,
-        summary: signalWithEpss.summary,
-        source: signalWithEpss.source,
-        vendor_project: signalWithEpss.vendor_project,
-        product: signalWithEpss.product,
-        cvss_score: signalWithEpss.cvss_score,
-        epss_percentile: CAPTURED_EPSS_PERCENTILE,
-        published_at: signalWithEpss.published_at,
-      },
-      investigations,
-    },
-    { status: 201 }
-  );
 }

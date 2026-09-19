@@ -152,7 +152,14 @@ It does the thing, live, at **https://detroit-cyber-ready-web.vercel.app**. The 
 
    ![The Slack CISO alert: P1, 911 Emergency Communications exposed, with the action plan, key findings, other affected services, and timeline.](docs/product/6-slack-alert.png)
 
-In our live runs, all five investigations complete in under a minute. 185 automated tests cover:
+**It is not canned.** The Threat feed page has a live check, also linked from step 2 of the dashboard:
+
+- It fetches the full CISA KEV catalog from cisa.gov on demand, 1,716 entries in under a second.
+- It runs every entry through the same deterministic match.
+- Most entries, including the newest additions, come back "No Detroit exposure". As of the latest check, 52 reach a Detroit service through its inventory: Ivanti Connect Secure, Cisco IOS XE, and Oracle WebLogic entries.
+- Any of those can be investigated on the spot by the same agents. For example, CVE-2023-20198, the Cisco IOS XE Web UI flaw, reaches 911 through the network core.
+
+In our live runs, all five investigations complete in under a minute. 197 automated tests cover:
 
 - the exposure match;
 - the one-hop dependency logic;

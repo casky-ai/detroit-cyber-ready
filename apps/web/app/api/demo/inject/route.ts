@@ -44,7 +44,9 @@ const DEMO_SIGNAL: RawSignal = {
   published_at: '2024-01-10T00:00:00.000Z', // the real KEV dateAdded
   severity: null,
   vendor_project: 'Ivanti',
-  product: 'Connect Secure',
+  // CISA's exact product text for this CVE; the matcher finds 'Connect
+  // Secure' inside it as a whole phrase.
+  product: 'Connect Secure and Policy Secure',
   cpe: null, // KEV itself never carries a CPE, matching what makeCisaKevSource() actually produces
   cvss_score: 8.2,
   epss_percentile: null, // attached separately below, from the captured EPSS lookup

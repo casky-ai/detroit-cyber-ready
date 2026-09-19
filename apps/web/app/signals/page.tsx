@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageContainer, PageHeader } from '@/components/page-header';
+import { LiveKevCheck } from '@/components/live-kev-check';
 
 interface SignalMatchRow {
   service_slug: string;
@@ -36,6 +37,8 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
 
 export default function SignalsFeedPage() {
   const [signals, setSignals] = useState<SignalRow[] | null>(null);
+  // /signals?live=1 (linked from the dashboard) runs the live check on arrival.
+  const [autoRun] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('live'));
   const [filter, setFilter] = useState<Filter>('all');
 
   useEffect(() => {
@@ -57,6 +60,12 @@ export default function SignalsFeedPage() {
         title="Threat intelligence feed"
         description="Every signal is shown, whether or not it matched anything in Detroit's inventory. That is what proves this system filters rather than alarms."
       />
+
+      <div className="mb-10">
+        <LiveKevCheck autoRun={autoRun} />
+      </div>
+
+      <h2 className="mb-3 text-lg font-bold">Stored signals</h2>
 
       <div role="tablist" aria-label="Filter signals" className="mb-4 inline-flex rounded-lg bg-muted p-1">
         {FILTERS.map((f) => {

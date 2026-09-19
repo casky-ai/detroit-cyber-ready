@@ -344,6 +344,12 @@ export default function ReadinessStory() {
                     {starting ? 'Starting agents' : 'Investigate with Casky agents'}
                   </Button>
                   {startError && <p className="mt-2 text-sm text-status-critical">Could not start the investigation: {startError}</p>}
+                  <p className="mt-3 text-center text-sm text-muted-foreground">
+                    Want today&apos;s CVEs instead?{' '}
+                    <a href="/signals?live=1" target="_blank" rel="noreferrer" className="font-medium text-brand-gold hover:underline">
+                      Check the live CISA KEV catalog
+                    </a>
+                  </p>
                 </div>
               )}
             </div>

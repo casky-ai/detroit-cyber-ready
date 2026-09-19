@@ -59,7 +59,11 @@ export async function POST(req: Request) {
   const gaps: string[] = [];
   const allSignals: RawSignal[] = [];
 
-  const kev = await makeCisaKevSource().poll(since);
+  // The whole KEV catalog, not just the last day: it is small (under 2,000
+  // entries), upserts are idempotent by fingerprint, and the threat feed
+  // should show the real exploited-vulnerability history. The poll only
+  // stores signals; it never starts investigations.
+  const kev = await makeCisaKevSource().poll(new Date(0));
   allSignals.push(...kev.signals);
   gaps.push(...kev.gaps);
 
@@ -74,7 +78,9 @@ export async function POST(req: Request) {
   // EPSS is looked up per-CVE, for every KEV addition just found, so its
   // score can be attached to an investigation later without a second
   // live call blocking the investigation start.
-  const kevCveIds = kev.signals.map((s) => s.external_id);
+  const kevCveIds = kev.signals
+    .filter((s) => new Date(s.published_at).getTime() >= since.getTime())
+    .map((s) => s.external_id);
   const epss = await pollForCves(kevCveIds);
   allSignals.push(...epss.signals);
   gaps.push(...epss.gaps);

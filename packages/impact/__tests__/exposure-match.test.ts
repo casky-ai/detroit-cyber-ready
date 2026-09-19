@@ -128,6 +128,57 @@ describe('matchSignalToAssets: stage 1', () => {
     expect(matches).toEqual([]);
   });
 
+  // Real CISA KEV product strings. KEV names a product line, often several
+  // products at once, and sometimes by a former name; an inventory names
+  // the one product it runs. Exact string equality would miss every one of
+  // these real entries, including the demo CVE's own record.
+  describe('real KEV product naming', () => {
+    const kev = (product: string, vendor = 'Ivanti') =>
+      makeSignal({ cpe: null, vendor_project: vendor, product });
+
+    it('matches when the inventory product appears as a phrase in a multi-product KEV entry', () => {
+      const matches = matchSignalToAssets(kev('Connect Secure and Policy Secure'), [makeTech({ cpe: null })]);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].matchBasis).toBe('vendor+product');
+      expect(matches[0].matchedOn).toMatchObject({ matched_phrase: 'connect secure' });
+    });
+
+    it('matches the product under its former name (Pulse Connect Secure)', () => {
+      expect(matchSignalToAssets(kev('Pulse Connect Secure'), [makeTech({ cpe: null })])).toHaveLength(1);
+    });
+
+    it('matches through software the device runs, recorded as a catalog name', () => {
+      const catalyst = makeTech({
+        cpe: null,
+        infrastructure_slug: 'network-core',
+        vendor: 'Cisco',
+        product: 'Catalyst 9000',
+        catalog_names: ['IOS XE'],
+      });
+      const matches = matchSignalToAssets(kev('IOS and IOS XE Software', 'Cisco'), [catalyst]);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].matchedOn).toMatchObject({ matched_phrase: 'ios xe' });
+    });
+
+    it('does not match a different product from the same vendor', () => {
+      expect(matchSignalToAssets(kev('Endpoint Manager Mobile (EPMM)'), [makeTech({ cpe: null })])).toEqual([]);
+    });
+
+    it('does not match a catalog name on a partial word (IOS XR is not IOS XE)', () => {
+      const catalyst = makeTech({ cpe: null, vendor: 'Cisco', product: 'Catalyst 9000', catalog_names: ['IOS XE'] });
+      expect(matchSignalToAssets(kev('IOS XR', 'Cisco'), [catalyst])).toEqual([]);
+    });
+
+    it('never matches a phrase across vendors', () => {
+      expect(matchSignalToAssets(kev('Connect Secure and Policy Secure', 'Fortinet'), [makeTech({ cpe: null })])).toEqual([]);
+    });
+
+    it('does not treat a single-word product as a phrase inside a longer product', () => {
+      const sentry = makeTech({ cpe: null, product: 'Sentry' });
+      expect(matchSignalToAssets(kev('Sentry Management Console'), [sentry])).toEqual([]);
+    });
+  });
+
   it('can match multiple technology rows for one signal', () => {
     const signal = makeSignal({ cpe: null });
     const matches = matchSignalToAssets(signal, [

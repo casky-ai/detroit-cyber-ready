@@ -77,6 +77,10 @@ export const TechnologySchema = z
     version: VersionLikeSchema,
     cpe: z.string().nullable().default(null),
     exposure: z.enum(['internet-facing', 'partner-network', 'internal']),
+    // Other names vulnerability catalogs use for this technology: chiefly
+    // the software a device runs (a Catalyst 9000 switch runs IOS XE, and
+    // CISA KEV files the flaw under IOS XE, not the switch model).
+    catalog_names: z.array(z.string().min(1)).optional(),
   })
   .refine(
     (t) => Boolean(t.service_slug) !== Boolean(t.infrastructure_slug),

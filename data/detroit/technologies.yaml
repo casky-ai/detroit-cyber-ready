@@ -33,6 +33,9 @@
   version: null
   cpe: null
   exposure: internal
+  # The switches run Cisco IOS XE; CISA KEV files switch flaws under the
+  # software, not the hardware model.
+  catalog_names: [IOS XE]
 
 - infrastructure_slug: records-management
   vendor: Tyler Technologies
@@ -63,6 +66,9 @@
   version: 2.8.1
   cpe: null
   exposure: internet-facing
+  # Customer Care and Billing runs on Oracle WebLogic Server, which is how
+  # CISA KEV lists Oracle's exploited application-server flaws.
+  catalog_names: [WebLogic Server]
 
 - service_slug: courts
   vendor: Tyler Technologies

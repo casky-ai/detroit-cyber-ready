@@ -73,12 +73,36 @@ function cpeMatches(signal: RawSignal, tech: Technology): boolean {
   return signal.cpe.toLowerCase() === tech.cpe.toLowerCase();
 }
 
-function vendorProductMatches(signal: RawSignal, tech: Technology): boolean {
-  if (!signal.vendor_project || !signal.product) return false;
-  return (
-    normalizeVendorName(signal.vendor_project) === normalizeVendorName(tech.vendor) &&
-    normalizeVendorName(signal.product) === normalizeVendorName(tech.product)
-  );
+/** Lowercase words only, so phrase checks respect word boundaries. */
+function words(value: string): string {
+  return ` ${normalizeVendorName(value).replace(/[^a-z0-9]+/g, ' ').trim()} `;
+}
+
+/**
+ * Which phrase, if any, ties the signal's product to this technology.
+ *
+ * Vendor must match exactly. Product matches when it is equal, or when the
+ * inventory's product name (two words or more) or one of its catalog names
+ * appears as a whole phrase inside the signal's product. That is how real
+ * CISA KEV entries are written: "Connect Secure and Policy Secure", "Pulse
+ * Connect Secure", "IOS and IOS XE Software". Whole words only, so IOS XR
+ * never matches IOS XE, and a one-word product never matches by accident
+ * inside an unrelated longer name.
+ */
+function vendorProductPhrase(signal: RawSignal, tech: Technology): string | null {
+  if (!signal.vendor_project || !signal.product) return null;
+  if (normalizeVendorName(signal.vendor_project) !== normalizeVendorName(tech.vendor)) return null;
+
+  const signalProduct = words(signal.product);
+  const product = words(tech.product);
+  if (signalProduct === product) return product.trim();
+
+  const candidates = [
+    ...(product.trim().split(' ').length >= 2 ? [product] : []),
+    ...(tech.catalog_names ?? []).map(words),
+  ];
+  const hit = candidates.find((phrase) => phrase.trim() && signalProduct.includes(phrase));
+  return hit ? hit.trim() : null;
 }
 
 function advisoryKeywordMatches(signal: RawSignal, tech: Technology): boolean {
@@ -116,7 +140,8 @@ export function matchSignalToAssets(
       continue;
     }
 
-    if (vendorProductMatches(signal, tech)) {
+    const phrase = vendorProductPhrase(signal, tech);
+    if (phrase) {
       // A surface-change signal is a direct, fresh observation of the
       // externally visible asset itself, not an inference from a public
       // catalog — it earns a higher confidence than an ordinary
@@ -127,7 +152,7 @@ export function matchSignalToAssets(
         landedOn,
         landedKind,
         matchBasis: isSurfaceHost ? 'surface-host' : 'vendor+product',
-        matchedOn: { vendor_project: signal.vendor_project, product: signal.product },
+        matchedOn: { vendor_project: signal.vendor_project, product: signal.product, matched_phrase: phrase },
         confidence: isSurfaceHost ? 0.85 : 0.8,
       });
       continue;
