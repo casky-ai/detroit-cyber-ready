@@ -11,6 +11,9 @@ import { NextResponse } from 'next/server';
 import { getAdminClient } from '@/lib/supabase/admin';
 import { isSameOrigin } from '@/lib/same-origin';
 
+// The count must be read on every request, never prerendered at build time.
+export const dynamic = 'force-dynamic';
+
 async function countInvestigations() {
   const { count, error } = await getAdminClient().from('investigations').select('id', { count: 'exact', head: true });
   if (error) throw error;
