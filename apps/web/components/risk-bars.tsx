@@ -1,5 +1,5 @@
 // Four bars, one per scoring component, so the number is auditable rather
-// than trusted. Matches computeRiskScore's exact formula weights — if that
+// than trusted. Matches computeRiskScore's exact formula weights; if that
 // formula ever changes, these labels must change with it.
 
 import { Progress } from '@/components/ui/progress';
@@ -27,7 +27,7 @@ export function RiskBars({ components, score }: RiskBarsProps) {
           <div key={key}>
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{label}</span>
-              <span className="tabular-nums text-muted-foreground">
+              <span className="font-mono tabular-nums text-muted-foreground">
                 {(raw * 100).toFixed(0)}% · +{contribution.toFixed(1)}
               </span>
             </div>
@@ -35,9 +35,12 @@ export function RiskBars({ components, score }: RiskBarsProps) {
           </div>
         );
       })}
-      <div className="flex items-center justify-between pt-1 text-sm font-medium">
+      <div className="flex items-baseline justify-between border-t border-border pt-3 text-sm font-medium">
         <span>Total risk score</span>
-        <span className="tabular-nums">{score}/100</span>
+        <span className="font-mono tabular-nums">
+          <span className="text-2xl font-semibold">{score}</span>
+          <span className="text-muted-foreground">/100</span>
+        </span>
       </div>
     </div>
   );
