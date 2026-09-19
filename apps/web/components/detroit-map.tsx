@@ -1,15 +1,20 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { ServiceSummary } from '@/lib/api-types';
 import { computeServiceStatus, type ServiceStatus } from '@/lib/status';
 
-// CARTO's dark-matter basemap: free, no API key required. Chosen because
-// this is a SOC-style dashboard, not a tourism map — a dark basemap keeps
-// the colored status markers as the only thing that draws the eye.
-const BASEMAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+// OpenFreeMap's dark style: free, no API key, no rate limit, maintained
+// specifically as a reliable no-strings-attached basemap provider. Switched
+// from CARTO's dark-matter style after it rendered a blank canvas (style
+// and tile endpoints both returned 200 with open CORS when checked directly,
+// so the failure was client-side and not reproducible from the server —
+// rather than debug blind, this swaps to a different, independently
+// reliable provider and adds the error handling below so a future basemap
+// failure is visible in the UI instead of a silent black box.
+const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 
 const STATUS_COLOR: Record<ServiceStatus, string> = {
   ok: '#3ecf8e', // matches --status-ok
@@ -26,6 +31,8 @@ export function DetroitMap({ services, onSelect }: DetroitMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   // Keep the latest onSelect without re-running the marker-build effect —
   // markers are rebuilt only when the service list itself changes.
   const onSelectRef = useRef(onSelect);
@@ -33,16 +40,36 @@ export function DetroitMap({ services, onSelect }: DetroitMapProps) {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    mapRef.current = new maplibregl.Map({
+    const map = new maplibregl.Map({
       container: containerRef.current,
       style: BASEMAP_STYLE,
       center: [-83.0458, 42.345],
       zoom: 11.3,
       attributionControl: false,
     });
-    mapRef.current.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    mapRef.current = map;
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+    // Never fail silently: a blank map with no error message reads as "the
+    // app is broken" during a demo. Surface anything MapLibre reports.
+    map.on('error', (e) => {
+      console.error('MapLibre error:', e.error);
+      setMapError(e.error?.message ?? 'The map failed to load.');
+    });
+    map.on('load', () => {
+      setLoaded(true);
+      // Defensive: if the container's final size wasn't settled at
+      // construction time (a common issue inside flex/grid layouts),
+      // MapLibre can cache the wrong canvas dimensions.
+      map.resize();
+    });
+
+    const onWindowResize = () => map.resize();
+    window.addEventListener('resize', onWindowResize);
+
     return () => {
-      mapRef.current?.remove();
+      window.removeEventListener('resize', onWindowResize);
+      map.remove();
       mapRef.current = null;
     };
   }, []);
@@ -100,7 +127,20 @@ export function DetroitMap({ services, onSelect }: DetroitMapProps) {
           50% { transform: scale(1.25); }
         }
       `}</style>
-      <div ref={containerRef} className="h-[420px] w-full rounded-lg border border-border sm:h-[520px]" />
+      <div className="relative h-[420px] w-full overflow-hidden rounded-lg border border-border sm:h-[520px]">
+        <div ref={containerRef} className="h-full w-full" />
+        {!loaded && !mapError && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+            Loading map…
+          </div>
+        )}
+        {mapError && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/80 px-6 text-center text-sm text-status-at-risk">
+            Map tiles failed to load ({mapError}). This is a basemap rendering issue only — every service&apos;s
+            status, address, and investigation data is unaffected.
+          </div>
+        )}
+      </div>
     </>
   );
 }
