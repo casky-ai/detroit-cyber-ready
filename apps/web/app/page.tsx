@@ -1,390 +1,502 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { cn } from 'cn';
-import { Activity, MapPin, MousePointerClick, Radar } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowRight, Bot, CircleCheck, ClipboardList, ExternalLink, Loader2, Radar, ShieldAlert, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { DetroitMap } from '@/components/detroit-map';
+import { Button } from '@/components/ui/button';
+import { CityBoard, statusSummary, type BoardSignal } from '@/components/city-board';
+import type { BasemapLoad } from '@/components/city-map';
+import { ActionPlanCard, ImpactCard, type InvestigationDetail } from '@/components/impact-card';
 import { PageContainer } from '@/components/page-header';
-import type { ServiceSummary } from '@/lib/api-types';
-import { computeServiceStatus, STATUS_LABEL, type ServiceStatus } from '@/lib/status';
+import type { ServiceSummary, StepEvent } from '@/lib/api-types';
+import type { DemoInvestigationSeed, DemoStartResponse } from '@/lib/timeline-types';
 
-interface Tech {
-  vendor: string;
-  product: string;
-  version: string | null;
-  exposure: string;
-}
+// The main dashboard, told as the six-step story the demo walks through:
+// 1 all clear, 2 threat intel arrives, 3 agents investigate, 4 risk
+// identified, 5 impact analysis, 6 action plan delivered. Every step runs
+// the real pipeline: the signal is a real CISA KEV entry and step 3 opens
+// one live agent per affected service.
 
-interface AssetInfo {
-  service: { slug: string; name: string; address: string };
-  own_technology: Tech[];
-  shared_infrastructure: Array<{
-    infrastructure_name: string;
-    criticality: 'hard' | 'soft';
-    rationale: string;
-    technology: Tech[];
-  }>;
-}
+const DETROIT = 'America/Detroit';
+const ANCHOR_SLUG = '911-emergency-communications';
 
-interface FeedSignal {
-  id: string;
-  source: string;
-  provenance: 'live' | 'synthetic';
-  external_id: string;
-  title: string;
-  published_at: string;
-  matches: Array<{ service_slug: string }>;
-}
+const clock = (d: Date | string = new Date()) =>
+  new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: DETROIT });
+const clockSeconds = (d: Date | string) =>
+  new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', timeZone: DETROIT });
 
-const STATUS_DOT: Record<ServiceStatus, string> = {
-  ok: 'bg-status-ok',
-  'at-risk': 'bg-status-at-risk',
-  critical: 'bg-status-critical',
+// The agent's real step events, in the order it emits them.
+const STEPS: Array<{ key: string; label: string }> = [
+  { key: 'connected', label: 'Pick up the threat signal' },
+  { key: 'context-assembled', label: 'Analyze threat intelligence and indicators' },
+  { key: 'context-enriched', label: 'Check the Casky platform for known playbooks' },
+  { key: 'technique-assessed', label: 'Assess the exploitation technique and exposure' },
+  { key: 'skills-selected', label: 'Select response skills' },
+  { key: 'impact-correlated', label: 'Correlate with city services and resident impact' },
+  { key: 'plan-generated', label: 'Generate the remediation plan' },
+];
+
+const SIGNAL = {
+  cve: 'CVE-2023-46805',
+  product: 'Ivanti Connect Secure',
+  summary:
+    'Actively exploited authentication bypass in Ivanti Connect Secure, a widely used remote access gateway.',
+  added: 'Jan 10, 2024',
+  kevUrl: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog',
 };
 
-const STATUS_TEXT: Record<ServiceStatus, string> = {
-  ok: 'text-status-ok',
-  'at-risk': 'text-status-at-risk',
-  critical: 'text-status-critical',
-};
+// What else is known about this CVE. Everything marked live comes from the
+// real feeds; the scanning item is illustrative until a GreyNoise-style
+// source is connected (see docs/connectors.md), and says so.
+const RELATED: Array<{ text: string; source: string; live: boolean }> = [
+  { text: 'Known use in ransomware campaigns', source: 'CISA KEV', live: true },
+  { text: 'Exploitation likelier than 99.98% of published CVEs', source: 'FIRST EPSS', live: true },
+  { text: 'Authentication bypass, CWE-287, CVSS 8.2', source: 'NVD', live: true },
+  { text: 'Increased scanning of remote access gateways', source: 'Scanning intel', live: false },
+];
 
-function breakdown(critical: number, atRisk: number): string {
-  const parts = [critical > 0 && `${critical} at critical priority`, atRisk > 0 && `${atRisk} at risk`].filter(Boolean);
-  return parts.length ? `${parts.join(' and ')}. ` : '';
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
+
+interface AgentRun {
+  seed: DemoInvestigationSeed;
+  state: 'running' | 'done' | 'failed';
+  steps: Record<string, string>;
 }
 
-const CRITICALITY_ORDER: Record<ServiceSummary['criticality'], number> = {
-  'life-safety': 0,
-  critical: 1,
-  high: 2,
-  moderate: 3,
-  low: 4,
-};
-
-// The page's headline is the city's status, stated as a sentence a CISO
-// could read aloud, not a title plus a row of counters.
-function statusHeadline(services: ServiceSummary[]): string {
-  const flagged = services.filter((s) => computeServiceStatus(s.latest_investigation) !== 'ok').length;
-  if (flagged === 0) return `All ${services.length} city services are operational.`;
-  if (flagged === services.length) return `All ${services.length} city services need attention.`;
-  return `${flagged} of ${services.length} city services need attention.`;
-}
-
-// One cell per service, most critical first. Doubles as a compact legend
-// and as a second way to open a service without hunting on the map.
-function ServiceStrip({
-  services,
-  selectedSlug,
-  onSelect,
+function StoryStep({
+  n,
+  time,
+  title,
+  description,
+  children,
+  tone = 'default',
 }: {
-  services: ServiceSummary[];
-  selectedSlug?: string;
-  onSelect: (s: ServiceSummary) => void;
+  n: number;
+  time: string;
+  title: string;
+  description: ReactNode;
+  children: ReactNode;
+  tone?: 'default' | 'alert';
 }) {
-  const ordered = [...services].sort((a, b) => CRITICALITY_ORDER[a.criticality] - CRITICALITY_ORDER[b.criticality]);
   return (
-    <div className="flex gap-1" role="list" aria-label="Service status, most critical first">
-      {ordered.map((s) => {
-        const status = computeServiceStatus(s.latest_investigation);
-        return (
-          <button
-            key={s.slug}
-            role="listitem"
-            title={`${s.name}: ${STATUS_LABEL[status]}`}
-            aria-label={`${s.name}, ${STATUS_LABEL[status]}`}
-            onClick={() => onSelect(s)}
-            className={cn(
-              'h-2.5 flex-1 rounded-[3px] outline-none transition-[opacity,transform] duration-200 hover:scale-y-150 focus-visible:ring-2 focus-visible:ring-ring',
-              STATUS_DOT[status],
-              selectedSlug && selectedSlug !== s.slug && 'opacity-45'
-            )}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function TechRow({ t }: { t: Tech }) {
-  return (
-    <p className="flex flex-wrap items-baseline gap-x-1.5">
-      <span className="font-medium text-foreground">
-        {t.vendor} {t.product}
+    <section className="grid animate-in grid-cols-[auto_1fr] gap-x-4 gap-y-4 fade-in-0 slide-in-from-bottom-3 duration-500 sm:gap-x-6">
+      <span
+        className={cn(
+          'flex h-11 w-11 items-center justify-center rounded-full text-lg font-extrabold sm:h-14 sm:w-14 sm:text-2xl',
+          tone === 'alert' ? 'bg-status-critical text-white' : 'bg-primary text-primary-foreground'
+        )}
+      >
+        {n}
       </span>
-      {t.version && <span className="tabular-nums text-[11px] text-muted-foreground">{t.version}</span>}
-      <span className="text-muted-foreground">({t.exposure})</span>
-    </p>
+      <div>
+        <p className="text-lg font-bold tabular-nums text-brand-gold sm:text-xl" suppressHydrationWarning>
+          {time}
+        </p>
+        <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h2>
+        <p className="mt-1 max-w-[62ch] text-[15px] text-pretty text-muted-foreground">{description}</p>
+      </div>
+      <div className="col-span-2 sm:col-start-2 sm:col-span-1">{children}</div>
+    </section>
   );
 }
 
-export default function ReadinessBoard() {
+export default function ReadinessStory() {
   const [services, setServices] = useState<ServiceSummary[] | null>(null);
-  const [selected, setSelected] = useState<ServiceSummary | null>(null);
-  const [assets, setAssets] = useState<AssetInfo | null>(null);
-  const [signals, setSignals] = useState<FeedSignal[] | null>(null);
+  const [signals, setSignals] = useState<BoardSignal[] | null>(null);
+  const [mapLoad, setMapLoad] = useState<BasemapLoad>({ state: 'loading' });
+  const [times, setTimes] = useState<Partial<Record<Step, string>>>(() => ({ 1: clock() }));
+  const [phase, setPhase] = useState<Step>(1);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const [demo, setDemo] = useState<DemoStartResponse | null>(null);
+  const [agents, setAgents] = useState<Record<string, AgentRun>>({});
+  const [detail, setDetail] = useState<InvestigationDetail | null>(null);
+  const [alert, setAlert] = useState<{ state: 'idle' | 'sending' | 'sent' | 'not-sent'; reason?: string }>({ state: 'idle' });
+  const sources = useRef<EventSource[]>([]);
+  const stepRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const load = useCallback(async () => {
     try {
-      const [servicesRes, signalsRes] = await Promise.all([fetch('/api/services'), fetch('/api/signals?limit=8')]);
-      if (servicesRes.ok) {
-        const next: ServiceSummary[] = (await servicesRes.json()).services;
-        setServices(next);
-        // Keep the side panel in step with the 5s poll, so a marker that
-        // turns critical also turns critical in the open detail card.
-        setSelected((prev) => (prev ? (next.find((s) => s.slug === prev.slug) ?? prev) : prev));
-      }
-      if (signalsRes.ok) setSignals((await signalsRes.json()).signals);
+      const [s, g] = await Promise.all([fetch('/api/services'), fetch('/api/signals?limit=6')]);
+      if (s.ok) setServices((await s.json()).services);
+      if (g.ok) setSignals((await g.json()).signals);
     } catch {
-      // Transient fetch failure during polling: keep the last known state.
+      // keep last known state
     }
   }, []);
 
   useEffect(() => {
-    load();
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
+    const first = setTimeout(load, 0);
+    const id = setInterval(load, 5000);
+    const open = sources.current;
+    return () => {
+      clearTimeout(first);
+      clearInterval(id);
+      open.forEach((es) => es.close());
+    };
   }, [load]);
 
-  async function handleSelect(service: ServiceSummary) {
-    if (service.slug === selected?.slug) return;
-    setSelected(service);
-    setAssets(null);
+  function reach(step: Exclude<Step, 1>) {
+    setTimes((t) => ({ ...t, [step]: clock() }));
+    setPhase(step);
+    // Let the new step mount, then bring it into view for the audience.
+    setTimeout(() => stepRefs.current[step]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  }
+
+  async function investigate() {
+    setStarting(true);
+    setStartError(null);
     try {
-      const res = await fetch(`/api/services/${service.slug}/assets`);
-      if (res.ok) setAssets(await res.json());
-    } catch {
-      // Leave the skeleton; the viewer can click again.
+      const res = await fetch('/api/demo/start', { method: 'POST' });
+      const data: DemoStartResponse | { error: string } = await res.json();
+      if (!res.ok || 'error' in data) throw new Error('error' in data ? data.error : `status ${res.status}`);
+      setDemo(data);
+      const initial: Record<string, AgentRun> = {};
+      for (const seed of data.investigations) initial[seed.investigation_id] = { seed, state: 'running', steps: {} };
+      setAgents(initial);
+      reach(3);
+      for (const seed of data.investigations) connect(seed.investigation_id);
+    } catch (err) {
+      setStartError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setStarting(false);
     }
   }
 
-  const liveSignals = signals?.filter((s) => s.provenance === 'live') ?? [];
-  const count = (status: ServiceStatus) =>
-    services ? services.filter((s) => computeServiceStatus(s.latest_investigation) === status).length : null;
-  const selectedStatus = selected ? computeServiceStatus(selected.latest_investigation) : null;
+  function connect(id: string) {
+    const es = new EventSource(`/api/investigations/${id}/stream`);
+    sources.current.push(es);
+    es.addEventListener('step', (e) => {
+      const step: StepEvent = JSON.parse(e.data);
+      setAgents((prev) => ({ ...prev, [id]: { ...prev[id], steps: { ...prev[id].steps, [step.step]: step.at } } }));
+    });
+    es.addEventListener('done', () => {
+      es.close();
+      setAgents((prev) => ({ ...prev, [id]: { ...prev[id], state: 'done' } }));
+    });
+    es.addEventListener('timeout', () => {
+      es.close();
+      setAgents((prev) => ({ ...prev, [id]: { ...prev[id], state: 'failed' } }));
+    });
+  }
+
+  // Step 4 arrives when every agent has reported, with the board refreshed
+  // so the pins show the new status.
+  useEffect(() => {
+    const list = Object.values(agents);
+    if (phase !== 3 || list.length === 0 || list.some((a) => a.state === 'running')) return;
+    const anchorRun = list.find((a) => a.seed.service_slug === ANCHOR_SLUG) ?? list[0];
+    Promise.resolve().then(() => Promise.all([
+      load(),
+      fetch(`/api/investigations/${anchorRun.seed.investigation_id}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then(setDetail)
+        .catch(() => undefined),
+    ])).then(() => reach(4));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agents, phase]);
+
+  async function sendAlert() {
+    if (!demo) return;
+    setAlert({ state: 'sending' });
+    try {
+      const res = await fetch('/api/alerts/slack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signal: { ...demo.signal, source: 'cisa-kev' },
+          timeline: Object.entries(times).map(([n, time]) => ({ time, label: `Step ${n}`, kind: 'system' })),
+          investigations: demo.investigations.map((s) => ({
+            service_name: s.service_name,
+            priority: s.risk.priority,
+            risk_score: s.risk.score,
+            escalated: s.risk.escalated,
+          })),
+        }),
+      });
+      const result = await res.json();
+      setAlert(result.sent ? { state: 'sent' } : { state: 'not-sent', reason: result.reason });
+    } catch (err) {
+      setAlert({ state: 'not-sent', reason: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  const summary = services ? statusSummary(services) : null;
+  const agentList = Object.values(agents).sort((a, b) => (a.seed.service_slug === ANCHOR_SLUG ? -1 : b.seed.service_slug === ANCHOR_SLUG ? 1 : 0));
+  const anchor = agentList.find((a) => a.seed.service_slug === ANCHOR_SLUG) ?? agentList[0];
+  const currentStep = anchor ? STEPS.findIndex((s) => !anchor.steps[s.key]) : -1;
 
   return (
-    <PageContainer>
-      <section className="mb-7 max-w-3xl">
-        {services ? (
-          <h1 className="text-[2.25rem] font-extrabold leading-[1.05] tracking-[-0.025em] text-balance sm:text-[3.25rem]">
-            {statusHeadline(services)}
-          </h1>
-        ) : (
-          <Skeleton className="h-12 w-full max-w-xl sm:h-14" />
-        )}
-        <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground text-pretty">
-          {services && breakdown(count('critical') ?? 0, count('at-risk') ?? 0)}
-          Every marker is a city service at its real address. Select one to see what it runs and what it depends on.
-        </p>
-        <div className="mt-5 max-w-md">
-          {services ? (
-            <ServiceStrip services={services} selectedSlug={selected?.slug} onSelect={handleSelect} />
-          ) : (
-            <Skeleton className="h-2.5 w-full" />
-          )}
-        </div>
-      </section>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          {services ? (
-            <DetroitMap services={services} selectedSlug={selected?.slug} onSelect={handleSelect} />
-          ) : (
-            <Skeleton className="aspect-[1000/640] w-full rounded-xl" />
-          )}
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {(['ok', 'at-risk', 'critical'] as const).map((s) => (
-              <span key={s} className="flex items-center gap-1.5">
-                <span className={cn('h-2 w-2 rounded-full', STATUS_DOT[s])} /> {STATUS_LABEL[s]}
-              </span>
-            ))}
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full border-2 border-foreground" /> Life-safety tier
-            </span>
-            <span className="sm:ml-auto">Service inventory is simulated</span>
+    <PageContainer className="max-w-5xl space-y-14 pb-24">
+      <div>
+        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-border pb-8">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Detroit Cyber Ready</h1>
+            <p className="mt-2 text-lg text-muted-foreground">Know when your city is at risk, before an incident becomes an outage.</p>
           </div>
-        </div>
-
-        <div className="lg:sticky lg:top-20 lg:self-start">
-          {!selected ? (
-            <Card className="justify-center py-8 lg:min-h-[240px]">
-              <CardContent className="flex flex-col items-center gap-3 text-center">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  <MousePointerClick className="h-5 w-5 text-muted-foreground" aria-hidden />
-                </span>
-                <p className="max-w-[240px] text-sm text-muted-foreground">
-                  Select a marker on the map to see that service&apos;s status, address, and declared assets.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card key={selected.slug} className="animate-in fade-in-0 slide-in-from-right-2 duration-300">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <CardTitle className="text-base">{selected.name}</CardTitle>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{selected.department}</p>
-                  </div>
-                  {selectedStatus && (
-                    <Badge variant="outline" className={cn('shrink-0 gap-1.5', STATUS_TEXT[selectedStatus])}>
-                      <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[selectedStatus])} />
-                      {STATUS_LABEL[selectedStatus]}
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                  {selected.address}
-                </p>
-                <p className="text-pretty">{selected.resident_impact}</p>
-
-                {selected.latest_investigation && (
-                  <div className="flex items-center gap-2 rounded-lg bg-muted/60 p-2.5">
-                    {selected.latest_investigation.priority && (
-                      <Badge variant={selected.latest_investigation.priority === 'P1' ? 'destructive' : 'secondary'}>
-                        {selected.latest_investigation.priority}
-                      </Badge>
-                    )}
-                    <span className="text-xs capitalize text-muted-foreground">
-                      {selected.latest_investigation.status}
-                    </span>
-                    <Link
-                      href={`/investigations/${selected.latest_investigation.id}`}
-                      className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'ml-auto')}
-                    >
-                      Open investigation
-                    </Link>
-                  </div>
-                )}
-
-                <div className="border-t border-border pt-3">
-                  <p className="mb-2 text-sm font-semibold text-muted-foreground">
-                    Declared assets
-                  </p>
-                  {!assets ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-12 w-full" />
-                    </div>
-                  ) : (
-                    <div className="space-y-2 text-xs">
-                      {assets.own_technology.map((t, i) => (
-                        <div key={i} className="rounded-lg border border-border p-2.5">
-                          <TechRow t={t} />
-                        </div>
-                      ))}
-                      {assets.shared_infrastructure.map((dep, i) => (
-                        <div key={i} className="space-y-1 rounded-lg border border-border p-2.5">
-                          <p className="flex items-center gap-1.5 text-muted-foreground">
-                            via <span className="font-medium text-foreground">{dep.infrastructure_name}</span>
-                            <Badge
-                              variant={dep.criticality === 'hard' ? 'destructive' : 'outline'}
-                              className="h-4 px-1.5 text-[10px]"
-                            >
-                              {dep.criticality}
-                            </Badge>
-                          </p>
-                          {dep.technology.map((t, j) => (
-                            <TechRow key={j} t={t} />
-                          ))}
-                        </div>
-                      ))}
-                      {assets.own_technology.length === 0 && assets.shared_infrastructure.length === 0 && (
-                        <p className="text-muted-foreground">No declared technology on file.</p>
-                      )}
-                    </div>
-                  )}
-                  <p className="mt-2.5 text-[11px] text-muted-foreground">
-                    Declared inventory, not a live scan. See docs/connectors.md.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <div className="text-right">
+            <p className="flex items-center justify-end gap-3 text-2xl font-extrabold tracking-wide text-brand-gold">
+              Detect <ArrowRight className="h-5 w-5" aria-hidden /> Investigate <ArrowRight className="h-5 w-5" aria-hidden /> Act
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              External intelligence + AI agents + service impact = a more resilient Detroit
+            </p>
+          </div>
         </div>
       </div>
 
-      <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Radar className="h-4 w-4 text-brand-gold" aria-hidden />
-                Live CISA KEV feed
-              </CardTitle>
-              <Badge className="gap-1.5">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-foreground/70" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary-foreground" />
-                </span>
-                Live
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {!signals ? (
-              <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-5 w-full" />
-                ))}
-              </div>
-            ) : liveSignals.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No signals polled yet. The poll cron writes the <code>signals</code> table this
-                panel reads from.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border/60">
-                {liveSignals.slice(0, 5).map((s) => (
-                  <li key={s.id} className="flex items-center gap-3 py-2 text-xs first:pt-0 last:pb-0">
-                    <span className="w-32 shrink-0 tabular-nums text-muted-foreground">{s.external_id}</span>
-                    <span className="min-w-0 flex-1 truncate">{s.title}</span>
-                    {s.matches.length > 0 ? (
-                      <Badge variant="outline" className="shrink-0 text-[10px] text-status-at-risk">
-                        {s.matches.length} match{s.matches.length === 1 ? '' : 'es'}
-                      </Badge>
-                    ) : (
-                      <span className="shrink-0 text-[10px] text-muted-foreground">No exposure</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link
-              href="/signals"
-              className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              See the full threat feed
-            </Link>
-          </CardContent>
-        </Card>
+      {/* Step 1: the board, all clear (or showing whatever is live). */}
+      <div ref={(el) => { stepRefs.current[1] = el; }}>
+        <StoryStep
+          n={1}
+          time={times[1] ?? ''}
+          title={summary ? (summary.flagged === 0 ? 'All systems operational' : `${summary.headline}`) : 'Checking city services'}
+          description={
+            summary && summary.flagged > 0
+              ? 'Results from an earlier run are still on the board. Run pnpm demo:reset to start the story from all green.'
+              : 'Detroit city services are healthy and online.'
+          }
+        >
+          {services ? (
+            <CityBoard services={services} signals={signals} onBasemapLoad={setMapLoad} />
+          ) : (
+            <div className="aspect-[1000/700] animate-pulse rounded-2xl bg-muted" />
+          )}
+          <p className="mt-2 text-xs text-muted-foreground">
+            {mapLoad.state === 'ready'
+              ? `Street map loaded from this site in ${mapLoad.ms} ms (${mapLoad.kb} KB). No external map service is used, so it works on any network.`
+              : mapLoad.state === 'error'
+                ? 'Street map failed to load from /maps/detroit-basemap.svg.'
+                : 'Loading the street map from this site.'}
+          </p>
+          {phase === 1 && (
+            <Button size="lg" className="mt-5 gap-2 font-semibold" onClick={() => reach(2)}>
+              <Radar className="h-4 w-4" aria-hidden />
+              Receive a new threat signal
+            </Button>
+          )}
+        </StoryStep>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Activity className="h-4 w-4 text-brand-verdigris" aria-hidden />
-                Threat intelligence context
-              </CardTitle>
-              <Badge variant="outline" className="text-[10px]">
-                Simulated
-              </Badge>
+      {/* Step 2: a real KEV entry arrives. */}
+      {phase >= 2 && (
+        <div ref={(el) => { stepRefs.current[2] = el; }}>
+          <StoryStep
+            n={2}
+            time={times[2] ?? ''}
+            title="New threat intel detected"
+            description="A high-priority external threat intelligence alert arrives."
+          >
+            <div className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
+              <div className="flex items-center gap-2 px-5 pt-4 text-base font-semibold">
+                <ShieldAlert className="h-5 w-5 text-status-critical" aria-hidden />
+                Threat intelligence feed
+              </div>
+              <div className="m-4 rounded-xl bg-status-critical/10 p-4 ring-1 ring-status-critical/30">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="destructive" className="font-bold">
+                    New threat alert
+                  </Badge>
+                  <span className="text-sm tabular-nums text-muted-foreground">{times[2]}</span>
+                </div>
+                <p className="mt-3 text-sm font-medium text-sky-300">CISA Known Exploited Vulnerabilities (KEV)</p>
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-2xl font-extrabold tabular-nums">{SIGNAL.cve}</p>
+                  <Badge variant="destructive">High priority</Badge>
+                </div>
+                <p className="mt-1.5 text-pretty">{SIGNAL.summary}</p>
+                <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+                  <a href={SIGNAL.kevUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sky-300 hover:underline">
+                    Source: CISA KEV <ExternalLink className="h-3 w-3" aria-hidden />
+                  </a>
+                  <span>Added to the KEV catalog {SIGNAL.added}</span>
+                </div>
+              </div>
+              <div className="px-5 pb-2">
+                <p className="text-sm font-semibold">Related intelligence</p>
+                <ul className="mt-2 divide-y divide-border/60">
+                  {RELATED.map((r) => (
+                    <li key={r.text} className="flex items-center gap-3 py-2.5 text-sm">
+                      <span className={cn('h-2 w-2 shrink-0 rounded-full', r.live ? 'bg-status-critical' : 'bg-muted-foreground')} aria-hidden />
+                      <span className="min-w-0 flex-1">{r.text}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">{r.source}</span>
+                      <Badge variant="outline" className="w-20 shrink-0 justify-center text-[10px]">
+                        {r.live ? 'Live data' : 'Simulated'}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {phase === 2 && (
+                <div className="p-4">
+                  <Button
+                    size="lg"
+                    onClick={investigate}
+                    disabled={starting}
+                    className="h-12 w-full gap-2 text-base font-semibold"
+                  >
+                    {starting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Bot className="h-5 w-5" aria-hidden />}
+                    {starting ? 'Starting agents' : 'Investigate with Casky agents'}
+                  </Button>
+                  {startError && <p className="mt-2 text-sm text-status-critical">Could not start the investigation: {startError}</p>}
+                </div>
+              )}
             </div>
-          </CardHeader>
-          <CardContent className="text-xs text-pretty text-muted-foreground">
-            Synthetic scanning and OSINT-style indicators, stored the same way live signals are. Not fetched from a
-            live scanner; see the <code>SurfaceSource</code> contract in{' '}
-            <code>packages/signals</code>.
-          </CardContent>
-        </Card>
-      </section>
+          </StoryStep>
+        </div>
+      )}
+
+      {/* Step 3: the real agents, one per affected service. */}
+      {phase >= 3 && anchor && (
+        <div ref={(el) => { stepRefs.current[3] = el; }}>
+          <StoryStep
+            n={3}
+            time={times[3] ?? ''}
+            title="Casky agents start investigating"
+            description="Agents analyze the threat, map it to Detroit's services, and gather evidence."
+          >
+            <div className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
+              <div className="flex items-center gap-3 px-5 pt-5">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/15 text-brand-gold ring-1 ring-primary/40">
+                  <Bot className="h-6 w-6" aria-hidden />
+                </span>
+                <div className="flex-1">
+                  <p className="text-base font-bold">Casky agent investigation</p>
+                  <p className="text-sm text-sky-300">Investigating {SIGNAL.cve} for {anchor.seed.service_name}</p>
+                </div>
+                <span className="text-sm tabular-nums text-muted-foreground">{times[3]}</span>
+              </div>
+
+              <ol className="relative mx-5 mt-4 space-y-3 before:absolute before:top-3 before:bottom-3 before:left-[11px] before:w-px before:bg-border">
+                {STEPS.map((s, i) => {
+                  const at = anchor.steps[s.key];
+                  const current = !at && i === currentStep && anchor.state === 'running';
+                  return (
+                    <li key={s.key} className="relative flex items-center gap-3 text-sm">
+                      <span
+                        className={cn(
+                          'relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4 ring-card transition-colors duration-300',
+                          at ? 'bg-status-ok text-background' : current ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {at ? (
+                          <CircleCheck className="h-4 w-4" aria-hidden />
+                        ) : current ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        ) : (
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        )}
+                      </span>
+                      <span className="w-14 shrink-0 text-muted-foreground">Step {i + 1}</span>
+                      <span className={cn('min-w-0 flex-1', current && 'font-semibold text-brand-gold', !at && !current && 'text-muted-foreground')}>
+                        {s.label}
+                      </span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{at ? clockSeconds(at) : current ? 'Working' : 'Pending'}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <div className="m-4 rounded-xl bg-muted/50 p-4">
+                <p className="text-sm font-semibold">Agents at work</p>
+                <p className="text-xs text-muted-foreground">One agent per city service the vulnerability reaches, running in parallel.</p>
+                <div className="stagger mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                  {agentList.map((a) => (
+                    <div key={a.seed.investigation_id} className="flex flex-col items-center gap-1.5 rounded-lg bg-card p-3 text-center ring-1 ring-foreground/10">
+                      <span
+                        className={cn(
+                          'flex h-9 w-9 items-center justify-center rounded-full',
+                          a.state === 'done' ? 'bg-status-ok/15 text-status-ok' : a.state === 'failed' ? 'bg-status-critical/15 text-status-critical' : 'bg-primary/15 text-brand-gold'
+                        )}
+                      >
+                        {a.state === 'running' ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <CircleCheck className="h-4 w-4" aria-hidden />}
+                      </span>
+                      <span className="text-xs font-semibold leading-tight">{a.seed.service_name}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {a.state === 'running' ? `${Object.keys(a.steps).length} of ${STEPS.length} steps` : a.state === 'done' ? 'Reported' : 'Timed out'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </StoryStep>
+        </div>
+      )}
+
+      {/* Step 4: the same board, now showing where the risk landed. */}
+      {phase >= 4 && services && anchor && (
+        <div ref={(el) => { stepRefs.current[4] = el; }}>
+          <StoryStep
+            n={4}
+            tone="alert"
+            time={times[4] ?? ''}
+            title="Risk identified"
+            description={
+              anchor.seed.dependency
+                ? `Casky traced ${SIGNAL.cve} to ${anchor.seed.dependency.infrastructure.replace(/-/g, ' ')} infrastructure, one hop from ${anchor.seed.service_name}.`
+                : `Casky found an exposed asset associated with ${anchor.seed.service_name}.`
+            }
+          >
+            <CityBoard services={services} signals={signals} calloutSlug={ANCHOR_SLUG} />
+            {phase === 4 && detail && (
+              <Button size="lg" className="mt-5 gap-2 font-semibold" onClick={() => reach(5)}>
+                <Users className="h-4 w-4" aria-hidden />
+                Show the impact on residents
+              </Button>
+            )}
+          </StoryStep>
+        </div>
+      )}
+      {/* Step 5: what it means for residents, from the stored investigation. */}
+      {phase >= 5 && detail && anchor && (
+        <div ref={(el) => { stepRefs.current[5] = el; }}>
+          <StoryStep
+            n={5}
+            tone="alert"
+            time={times[5] ?? ''}
+            title="Impact analysis"
+            description="Casky determines the potential impact on residents."
+          >
+            <ImpactCard
+              detail={detail}
+              timeline={[
+                { time: times[1] ?? '', label: 'Board checked: services online' },
+                { time: times[2] ?? '', label: `${SIGNAL.cve} received from CISA KEV` },
+                ...STEPS.filter((st) => anchor.steps[st.key]).map((st) => ({ time: clockSeconds(anchor.steps[st.key]), label: st.label })),
+                { time: times[4] ?? '', label: `Risk identified for ${anchor.seed.service_name}` },
+              ]}
+            />
+            {phase === 5 && (
+              <Button size="lg" className="mt-5 gap-2 font-semibold" onClick={() => reach(6)}>
+                <ClipboardList className="h-4 w-4" aria-hidden />
+                Deliver the action plan
+              </Button>
+            )}
+          </StoryStep>
+        </div>
+      )}
+
+      {/* Step 6: the agent's ranked plan, the ticket, and the CISO alert. */}
+      {phase >= 6 && detail && (
+        <div ref={(el) => { stepRefs.current[6] = el; }}>
+          <StoryStep
+            n={6}
+            time={times[6] ?? ''}
+            title="Action plan delivered"
+            description="Casky provides clear, prioritized next steps for the CISO and team."
+          >
+            <ActionPlanCard detail={detail} alertState={alert.state} alertReason={alert.reason} onSendAlert={sendAlert} />
+          </StoryStep>
+        </div>
+      )}
+
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-sm text-muted-foreground">
+        <span className="font-semibold text-foreground">Detroit Cyber Ready</span>
+        <span>Proactive intelligence. Stronger services. A more resilient Detroit.</span>
+        <span>Built for Detroit, powered by Casky</span>
+      </footer>
     </PageContainer>
   );
 }

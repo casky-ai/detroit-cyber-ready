@@ -68,7 +68,8 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
   const [narrative, setNarrative] = useState('');
   const [done, setDone] = useState(false);
   const [stale, setStale] = useState(false);
-  const lastEventAt = useRef(Date.now());
+  // Set when the stream opens; read by the stale-banner interval below.
+  const lastEventAt = useRef(0);
   const narrativeRef = useRef<HTMLDivElement>(null);
 
   // The deterministic pieces (match, dependency, risk score) are already
@@ -93,6 +94,7 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     if (done) return;
+    lastEventAt.current = Date.now();
     const es = new EventSource(`/api/investigations/${id}/stream`);
 
     es.addEventListener('step', (e) => {

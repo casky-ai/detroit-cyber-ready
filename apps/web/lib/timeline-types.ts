@@ -1,4 +1,4 @@
-// Shared shapes for the /demo timeline experience.
+// Shared shapes for the demo story on the home page.
 
 export interface DemoSignal {
   external_id: string;

@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { History, Map, Play, Radar } from 'lucide-react';
+import { History, Map, Radar } from 'lucide-react';
 import { cn } from 'cn';
 import { buttonVariants } from '@/components/ui/button';
 
 // One header for every route, so moving between pages never changes the
 // frame around the content, only the content itself.
 const NAV = [
-  { href: '/', label: 'Readiness', icon: Map },
+  { href: '/', label: 'Dashboard', icon: Map },
   { href: '/signals', label: 'Threat feed', icon: Radar },
   { href: '/history', label: 'History', icon: History },
 ] as const;
@@ -51,15 +51,6 @@ export function SiteHeader() {
               </Link>
             );
           })}
-          <Link
-            href="/demo"
-            aria-current={isActive(pathname, '/demo') ? 'page' : undefined}
-            aria-label="Live demo"
-            className={cn(buttonVariants({ size: 'sm' }), 'ml-1 gap-1.5 font-semibold')}
-          >
-            <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
-            <span className="hidden sm:inline">Live demo</span>
-          </Link>
         </nav>
       </div>
     </header>

@@ -9,7 +9,8 @@
     "lint": "pnpm --filter web lint",
     "test": "pnpm -r --if-present run test",
     "db:seed": "dotenv -e .env.local -- tsx scripts/seed-detroit-data.ts",
-    "map:build": "tsx scripts/build-detroit-basemap.ts"
+    "map:build": "tsx scripts/build-detroit-basemap.ts",
+    "demo:reset": "dotenv -e .env.local -- tsx scripts/reset-demo.ts"
   },
   "engines": {
     "node": ">=20",

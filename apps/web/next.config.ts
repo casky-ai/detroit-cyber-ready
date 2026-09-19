@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
   // running the actual deployed demo endpoint, not by any test — vitest
   // runs against the real filesystem too, so this class of bug is
   // invisible to the whole test suite by construction.
+  // The six-step story is now the home page; keep old demo links working.
+  async redirects() {
+    return [
+      { source: "/demo", destination: "/", permanent: false },
+      { source: "/preview", destination: "/", permanent: false },
+    ];
+  },
   outputFileTracingIncludes: {
     "/api/**/*": ["../../data/detroit/**/*", "../../upstream/skills/index.json"],
   },

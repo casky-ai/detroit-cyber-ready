@@ -89,7 +89,7 @@ export default function HistoryPage() {
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-sm text-muted-foreground">No investigations yet.</p>
-            <Link href="/demo" className={buttonVariants({ size: 'sm' })}>
+            <Link href="/" className={buttonVariants({ size: 'sm' })}>
               Run the live demo
             </Link>
           </div>
