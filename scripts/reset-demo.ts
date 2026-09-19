@@ -6,9 +6,8 @@
 // Run:  pnpm demo:reset
 //
 // Uses the service-role key from .env.local over HTTPS (supabase-js), so it
-// works on networks that block direct Postgres connections. Deliberately a
-// local script rather than an API route: wiping history should never be
-// one unauthenticated request away.
+// works on networks that block direct Postgres connections. The site's
+// /reset page and dashboard button do the same through /api/demo/reset.
 
 import { createClient } from '@supabase/supabase-js';
 

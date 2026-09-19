@@ -9,6 +9,7 @@ import { CityBoard, statusSummary, type BoardSignal } from '@/components/city-bo
 import type { BasemapLoad } from '@/components/city-map';
 import { ActionPlanCard, ImpactCard, type InvestigationDetail } from '@/components/impact-card';
 import { PageContainer } from '@/components/page-header';
+import { ResetDemoButton } from '@/components/reset-demo-button';
 import type { ServiceSummary, StepEvent } from '@/lib/api-types';
 import type { DemoInvestigationSeed, DemoStartResponse } from '@/lib/timeline-types';
 
@@ -137,6 +138,12 @@ export default function ReadinessStory() {
     };
   }, [load]);
 
+  // A reload is the cleanest restart: open agent streams close, every step
+  // unmounts, and step 1 re-reads the now empty board.
+  function restart() {
+    window.location.reload();
+  }
+
   function reach(step: Exclude<Step, 1>) {
     setTimes((t) => ({ ...t, [step]: clock() }));
     setPhase(step);
@@ -246,7 +253,7 @@ export default function ReadinessStory() {
           title={summary ? (summary.flagged === 0 ? 'All systems operational' : `${summary.headline}`) : 'Checking city services'}
           description={
             summary && summary.flagged > 0
-              ? 'Results from an earlier run are still on the board. Run pnpm demo:reset to start the story from all green.'
+              ? 'Results from an earlier run are still on the board. Reset the demo to start the story from all green.'
               : 'Detroit city services are healthy and online.'
           }
         >
@@ -263,10 +270,13 @@ export default function ReadinessStory() {
                 : 'Loading the street map from this site.'}
           </p>
           {phase === 1 && (
-            <Button size="lg" className="mt-5 gap-2 font-semibold" onClick={() => reach(2)}>
-              <Radar className="h-4 w-4" aria-hidden />
-              Receive a new threat signal
-            </Button>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <Button size="lg" className="gap-2 font-semibold" onClick={() => reach(2)}>
+                <Radar className="h-4 w-4" aria-hidden />
+                Receive a new threat signal
+              </Button>
+              {summary && summary.flagged > 0 && <ResetDemoButton size="lg" onDone={restart} />}
+            </div>
           )}
         </StoryStep>
       </div>
@@ -488,6 +498,9 @@ export default function ReadinessStory() {
         <span className="font-semibold text-foreground">Detroit Cyber Ready</span>
         <span>Proactive intelligence. Stronger services. A more resilient Detroit.</span>
         <span>Built for Detroit, powered by Casky</span>
+        <span className="flex w-full justify-end">
+          <ResetDemoButton onDone={restart} />
+        </span>
       </footer>
     </PageContainer>
   );
