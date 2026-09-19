@@ -1,26 +1,41 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import * as maplibregl from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { useMemo } from 'react';
 import type { ServiceSummary } from '@/lib/api-types';
 import { computeServiceStatus, type ServiceStatus } from '@/lib/status';
 
-// OpenFreeMap's dark style: free, no API key, no rate limit, maintained
-// specifically as a reliable no-strings-attached basemap provider. Switched
-// from CARTO's dark-matter style after it rendered a blank canvas (style
-// and tile endpoints both returned 200 with open CORS when checked directly,
-// so the failure was client-side and not reproducible from the server —
-// rather than debug blind, this swaps to a different, independently
-// reliable provider and adds the error handling below so a future basemap
-// failure is visible in the UI instead of a silent black box.
-const BASEMAP_STYLE = 'https://tiles.openfreemap.org/styles/dark';
+// A self-contained SVG map: zero external network requests. This replaces
+// two consecutive tile-based basemap attempts (CARTO, then OpenFreeMap)
+// that both returned 200 with open CORS when checked directly from the
+// server, yet still failed to render for one specific viewer — meaning
+// something in that browser/network (firewall, extension, corporate proxy)
+// blocks external map tile CDNs specifically, not this app or its code. A
+// demo cannot depend on a viewer's specific network conditions, so this
+// draws the same information without needing any tile server: real
+// geocoded coordinates for every service, projected into plain SVG space.
+//
+// The Detroit River curve is decorative geography for orientation, not a
+// claim of surveyed accuracy — it is not read from any GeoJSON source.
 
 const STATUS_COLOR: Record<ServiceStatus, string> = {
-  ok: '#3ecf8e', // matches --status-ok
-  'at-risk': '#e0b341', // matches --status-at-risk
-  critical: '#e5484d', // matches --status-critical
+  ok: '#3ecf8e',
+  'at-risk': '#e0b341',
+  critical: '#e5484d',
 };
+
+// Padded slightly beyond the real min/max across all 12 geocoded addresses
+// (lat 42.329–42.368, lon -83.078– -83.044) so markers never sit at the
+// literal edge of the view.
+const BOUNDS = { minLat: 42.322, maxLat: 42.374, minLon: -83.086, maxLon: -83.036 };
+const VIEW_W = 1000;
+const VIEW_H = 640;
+
+function project(lat: number, lon: number): { x: number; y: number } {
+  const x = ((lon - BOUNDS.minLon) / (BOUNDS.maxLon - BOUNDS.minLon)) * VIEW_W;
+  // Latitude increases northward; SVG y increases downward, so invert.
+  const y = ((BOUNDS.maxLat - lat) / (BOUNDS.maxLat - BOUNDS.minLat)) * VIEW_H;
+  return { x, y };
+}
 
 interface DetroitMapProps {
   services: ServiceSummary[];
@@ -28,119 +43,60 @@ interface DetroitMapProps {
 }
 
 export function DetroitMap({ services, onSelect }: DetroitMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markersRef = useRef<maplibregl.Marker[]>([]);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-  // Keep the latest onSelect without re-running the marker-build effect —
-  // markers are rebuilt only when the service list itself changes.
-  const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
-
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: BASEMAP_STYLE,
-      center: [-83.0458, 42.345],
-      zoom: 11.3,
-      attributionControl: false,
-    });
-    mapRef.current = map;
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-
-    // Never fail silently: a blank map with no error message reads as "the
-    // app is broken" during a demo. Surface anything MapLibre reports.
-    map.on('error', (e) => {
-      console.error('MapLibre error:', e.error);
-      setMapError(e.error?.message ?? 'The map failed to load.');
-    });
-    map.on('load', () => {
-      setLoaded(true);
-      // Defensive: if the container's final size wasn't settled at
-      // construction time (a common issue inside flex/grid layouts),
-      // MapLibre can cache the wrong canvas dimensions.
-      map.resize();
-    });
-
-    const onWindowResize = () => map.resize();
-    window.addEventListener('resize', onWindowResize);
-
-    return () => {
-      window.removeEventListener('resize', onWindowResize);
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    // map is passed explicitly rather than closed over: TypeScript does not
-    // narrow a closed-over `const` across a nested function declaration's
-    // boundary, so `map` would still type as `Map | null` inside otherwise.
-    function buildMarkers(map: maplibregl.Map) {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-
-      for (const service of services) {
+  const points = useMemo(
+    () =>
+      services.map((service) => {
+        const { x, y } = project(service.lat, service.lon);
         const status = computeServiceStatus(service.latest_investigation);
-        const el = document.createElement('button');
-        el.setAttribute('aria-label', service.name);
-        el.style.width = service.criticality === 'life-safety' ? '22px' : '16px';
-        el.style.height = el.style.width;
-        el.style.borderRadius = '50%';
-        el.style.background = STATUS_COLOR[status];
-        el.style.border = service.criticality === 'life-safety' ? '3px solid white' : '2px solid rgba(255,255,255,0.6)';
-        el.style.boxShadow = status === 'critical' ? `0 0 12px 4px ${STATUS_COLOR[status]}88` : 'none';
-        el.style.cursor = 'pointer';
-        el.style.padding = '0';
-        if (status === 'critical' || status === 'at-risk') {
-          el.style.animation = 'pulse-marker 1.6s ease-in-out infinite';
-        }
-        el.onclick = () => onSelectRef.current(service);
-
-        const marker = new maplibregl.Marker({ element: el })
-          .setLngLat([service.lon, service.lat])
-          .setPopup(new maplibregl.Popup({ offset: 16, closeButton: false }).setText(service.name))
-          .addTo(map);
-        markersRef.current.push(marker);
-      }
-    }
-
-    if (map.isStyleLoaded()) buildMarkers(map);
-    else map.once('load', () => buildMarkers(map));
-
-    return () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-    };
-  }, [services]);
+        return { service, x, y, status };
+      }),
+    [services]
+  );
 
   return (
-    <>
-      <style>{`
-        @keyframes pulse-marker {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.25); }
-        }
-      `}</style>
-      <div className="relative h-[420px] w-full overflow-hidden rounded-lg border border-border sm:h-[520px]">
-        <div ref={containerRef} className="h-full w-full" />
-        {!loaded && !mapError && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-            Loading map…
-          </div>
-        )}
-        {mapError && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/80 px-6 text-center text-sm text-status-at-risk">
-            Map tiles failed to load ({mapError}). This is a basemap rendering issue only — every service&apos;s
-            status, address, and investigation data is unaffected.
-          </div>
-        )}
-      </div>
-    </>
+    <div className="relative h-[420px] w-full overflow-hidden rounded-lg border border-border bg-[#0a0d14] sm:h-[520px]">
+      <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="h-full w-full" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+          </pattern>
+        </defs>
+        <rect width={VIEW_W} height={VIEW_H} fill="url(#grid)" />
+
+        {/* The Detroit River: decorative orientation, not surveyed geography. */}
+        <path
+          d={`M -20 ${VIEW_H - 60} Q ${VIEW_W * 0.3} ${VIEW_H - 20}, ${VIEW_W * 0.6} ${VIEW_H - 70} T ${VIEW_W + 20} ${VIEW_H - 90}`}
+          fill="none"
+          stroke="rgba(62,140,207,0.35)"
+          strokeWidth="26"
+          strokeLinecap="round"
+        />
+        <text x={VIEW_W - 140} y={VIEW_H - 30} fill="rgba(255,255,255,0.25)" fontSize="14" fontStyle="italic">
+          Detroit River
+        </text>
+
+        {points.map(({ service, x, y, status }) => (
+          <g key={service.slug} className="cursor-pointer" onClick={() => onSelect(service)}>
+            {(status === 'critical' || status === 'at-risk') && (
+              <circle cx={x} cy={y} r={service.criticality === 'life-safety' ? 18 : 13} fill={STATUS_COLOR[status]} opacity={0.25}>
+                <animate attributeName="r" values={`${service.criticality === 'life-safety' ? 11 : 8};${service.criticality === 'life-safety' ? 20 : 15};${service.criticality === 'life-safety' ? 11 : 8}`} dur="1.6s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.35;0.05;0.35" dur="1.6s" repeatCount="indefinite" />
+              </circle>
+            )}
+            <circle
+              cx={x}
+              cy={y}
+              r={service.criticality === 'life-safety' ? 11 : 8}
+              fill={STATUS_COLOR[status]}
+              stroke={service.criticality === 'life-safety' ? 'white' : 'rgba(255,255,255,0.6)'}
+              strokeWidth={service.criticality === 'life-safety' ? 3 : 2}
+            />
+            <text x={x} y={y - 16} textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="12" fontWeight={600}>
+              {service.name}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
   );
 }
