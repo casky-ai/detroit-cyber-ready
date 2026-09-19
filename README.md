@@ -183,7 +183,7 @@ changed.              Detroit, and to which       right now, and who
                       city service?               owns it?
 ```
 
-1. **Detect.** Live external threat intelligence: CISA Known Exploited Vulnerabilities, NVD, EPSS, CISA advisories. Plus attack surface change detection.
+1. **Detect.** Live external threat intelligence: CISA Known Exploited Vulnerabilities, NVD, EPSS, and abuse.ch, polled every 6 hours. Plus attack surface change detection on synthetic snapshots.
 2. **Match, deterministically.** A newly exploited vendor and product is matched against the city's technology inventory. No model decides whether Detroit is exposed. The match is an auditable database row.
 3. **Propagate, one hop.** Most signals do not land on a city service directly. They land on shared infrastructure the service depends on. A remote access appliance is one hop from 911.
 4. **Investigate.** An agent pipeline assembles context, validates techniques, and correlates service impact.
@@ -202,7 +202,7 @@ We are explicit about this because a security product that overstates its inputs
 | Actively exploited vulnerabilities | CISA KEV | **Real, live** |
 | Vulnerability context, CVSS, CPE | NVD | **Real, live** |
 | Exploitation probability | FIRST.org EPSS | **Real, live** |
-| Advisories | CISA | **Real, live** |
+| Malicious infrastructure | abuse.ch | **Real, live** |
 | Street map: roads, parks, Detroit River | OpenStreetMap, built into the app | **Real** |
 | Service addresses | Public City of Detroit facility addresses, geocoded | **Real** |
 | Which vendor and product each service runs | authored by us | **Simulated, labeled in the UI** |
