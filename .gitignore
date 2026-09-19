@@ -24,3 +24,6 @@ yarn-error.log*
 coverage/
 .vitest/
 .env*
+
+# Raw OpenStreetMap download used by scripts/build-detroit-basemap.ts
+data/detroit/geo/.osm-cache.json
