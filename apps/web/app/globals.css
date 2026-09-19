@@ -50,6 +50,8 @@
   --color-status-at-risk: var(--status-at-risk);
   --color-status-critical: var(--status-critical);
   --color-status-life-safety: var(--status-life-safety);
+  --color-brand-verdigris: var(--brand-verdigris);
+  --color-brand-gold: var(--brand-gold);
 }
 
 :root {
@@ -63,8 +65,12 @@
   --card-foreground: oklch(0.96 0.005 255);
   --popover: oklch(0.21 0.02 255);
   --popover-foreground: oklch(0.96 0.005 255);
-  --primary: oklch(0.62 0.19 255);
-  --primary-foreground: oklch(0.98 0.005 255);
+  /* Gold, echoing the sun the Spirit of Detroit statue holds aloft —
+     the branding accent used for primary actions and headline moments. */
+  --primary: oklch(0.78 0.15 85);
+  --primary-foreground: oklch(0.18 0.02 85);
+  --brand-verdigris: oklch(0.6 0.1 165); /* the statue's oxidized-bronze green */
+  --brand-gold: oklch(0.78 0.15 85);
   --secondary: oklch(0.27 0.02 255);
   --secondary-foreground: oklch(0.96 0.005 255);
   --muted: oklch(0.27 0.02 255);

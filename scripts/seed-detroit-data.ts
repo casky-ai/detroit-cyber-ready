@@ -37,6 +37,14 @@ async function main() {
       slug: s.slug,
       name: s.name,
       department: s.department,
+      // Not persisted to city_services: the app always reads service
+      // metadata (name, department, address, resident_impact, ...) from
+      // this YAML via getDetroitInventory(), never back from the DB. This
+      // table exists for referential integrity (FKs from investigations,
+      // signal_matches) — adding an `address` column here would need a
+      // schema migration, and direct Postgres (port 5432) is blocked from
+      // this environment while the PostgREST/HTTPS path works fine. Adding
+      // it later is a plain `alter table` whenever that access exists.
       criticality: s.criticality,
       resident_impact: s.resident_impact,
       impact_unit: s.impact_unit,

@@ -101,3 +101,11 @@
   rationale: >
     Case lookup and e-filing depend directly on the records management
     system.
+
+- service_slug: courts
+  infrastructure_slug: remote-access
+  kind: reachable-via
+  criticality: soft
+  rationale: >
+    Remote e-filing and virtual hearing access connect through the remote
+    access tier for parties who cannot appear in person.

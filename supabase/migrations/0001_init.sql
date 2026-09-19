@@ -20,6 +20,9 @@ create table city_services (
   name               text not null,
   department         text not null,
   criticality        text not null check (criticality in ('life-safety','critical','high','moderate','low')),
+  -- address text not null,  -- planned; not yet applied to the live table
+  -- (direct Postgres access is blocked from the build environment; the app
+  -- never reads this column back anyway, see scripts/seed-detroit-data.ts)
   resident_impact    text not null,
   impact_unit        text,
   externally_exposed boolean not null default false,

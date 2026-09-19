@@ -22,6 +22,7 @@ export const CityServiceSchema = z.object({
   slug: z.string().min(1),
   name: z.string().min(1),
   department: z.string().min(1),
+  address: z.string().min(1),
   criticality: CriticalityTierSchema,
   // .nullable().default(null), no .optional(): the key may be entirely
   // absent from a service's YAML entry (most are) or explicitly null,

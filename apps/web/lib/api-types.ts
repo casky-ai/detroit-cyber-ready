@@ -6,6 +6,7 @@ export interface ServiceSummary {
   slug: string;
   name: string;
   department: string;
+  address: string;
   criticality: 'life-safety' | 'critical' | 'high' | 'moderate' | 'low';
   resident_impact: string;
   impact_unit: string | null;
