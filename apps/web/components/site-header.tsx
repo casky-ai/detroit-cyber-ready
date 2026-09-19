@@ -10,7 +10,7 @@ import { buttonVariants } from '@/components/ui/button';
 // frame around the content, only the content itself.
 const NAV = [
   { href: '/', label: 'Readiness', icon: Map },
-  { href: '/signals', label: 'Threat Feed', icon: Radar },
+  { href: '/signals', label: 'Threat feed', icon: Radar },
   { href: '/history', label: 'History', icon: History },
 ] as const;
 
@@ -24,20 +24,15 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/65">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <Link href="/" className="group flex items-center gap-2.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-brand-verdigris/20 ring-1 ring-brand-verdigris/50 transition-colors group-hover:bg-brand-verdigris/30">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 sm:gap-3 sm:px-6">
+        <Link href="/" className="group flex min-w-0 items-center gap-2 rounded-md sm:gap-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-verdigris/20 ring-1 ring-brand-verdigris/50 transition-colors group-hover:bg-brand-verdigris/30">
             <span className="h-2.5 w-2.5 rounded-full bg-brand-gold shadow-[0_0_10px] shadow-brand-gold/60" />
           </span>
-          <span className="flex flex-col leading-none">
-            <span className="text-sm font-semibold tracking-tight">Detroit Cyber Ready</span>
-            <span className="mt-0.5 hidden text-[10px] font-medium tracking-[0.18em] text-brand-gold sm:block">
-              DETECT · INVESTIGATE · ACT
-            </span>
-          </span>
+          <span className="truncate text-sm font-bold tracking-tight sm:text-[15px]">Detroit Cyber Ready</span>
         </Link>
 
-        <nav aria-label="Primary" className="ml-auto flex items-center gap-1">
+        <nav aria-label="Primary" className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
@@ -59,10 +54,11 @@ export function SiteHeader() {
           <Link
             href="/demo"
             aria-current={isActive(pathname, '/demo') ? 'page' : undefined}
+            aria-label="Live demo"
             className={cn(buttonVariants({ size: 'sm' }), 'ml-1 gap-1.5 font-semibold')}
           >
             <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
-            <span>Live Demo</span>
+            <span className="hidden sm:inline">Live demo</span>
           </Link>
         </nav>
       </div>

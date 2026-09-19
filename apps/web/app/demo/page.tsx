@@ -12,7 +12,6 @@ import {
   Radar,
   Search,
   Send,
-  ShieldAlert,
   Siren,
   Wrench,
 } from 'lucide-react';
@@ -99,7 +98,7 @@ function PhaseStepper({ phase }: { phase: Phase }) {
               </span>
               <span
                 className={cn(
-                  'text-[11px] font-medium uppercase tracking-wider transition-colors',
+                  'text-xs font-semibold transition-colors',
                   reached ? 'text-foreground' : 'text-muted-foreground'
                 )}
               >
@@ -156,7 +155,7 @@ function AgentCard({ agent }: { agent: AgentState }) {
                 ? 'Timed out'
                 : (lastStep ?? 'Connecting')}
           </span>
-          <span className="shrink-0 font-mono tabular-nums">Risk {seed.risk.score}</span>
+          <span className="shrink-0 tabular-nums">Risk {seed.risk.score}</span>
         </div>
       </CardContent>
     </Card>
@@ -318,25 +317,21 @@ export default function DemoPage() {
   return (
     <PageContainer className="max-w-5xl">
       <div className="mb-6 flex flex-col items-center gap-1 text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-brand-gold">Live timeline</p>
-        <LiveClock className="bg-gradient-to-b from-foreground to-foreground/60 bg-clip-text text-transparent" />
-        <p className="text-xs text-muted-foreground">Real wall clock. Nothing on this screen is pre-recorded.</p>
+        <LiveClock />
+        <p className="text-sm text-muted-foreground">Detroit time, live. Nothing on this screen is pre-recorded.</p>
       </div>
 
       <PhaseStepper phase={phase} />
 
       {phase === 'idle' && (
         <div className="flex animate-in flex-col items-center gap-5 py-10 fade-in-0 duration-500">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-verdigris/15 ring-1 ring-brand-verdigris/40">
-            <ShieldAlert className="h-6 w-6 text-brand-verdigris" aria-hidden />
-          </span>
           <p className="max-w-md text-center text-sm text-pretty text-muted-foreground">
-            Simulates a new external threat signal arriving and Detroit Cyber Ready responding to it in real time,
-            from detection to a Slack alert in the CISO&apos;s channel.
+            A real vulnerability from the CISA catalog arrives. Watch Detroit Cyber Ready find which city services it
+            reaches, investigate each one, and alert the CISO in Slack.
           </p>
           <Button size="lg" onClick={handleStartDemo} className="h-11 gap-2 px-6 text-base font-semibold">
             <Play className="h-4 w-4 fill-current" aria-hidden />
-            Start Demo
+            Start the demo
           </Button>
         </div>
       )}
@@ -348,10 +343,9 @@ export default function DemoPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Siren className="h-4 w-4 text-status-critical" aria-hidden />
-                  CVE reported
-                  <span className="font-normal text-muted-foreground">· Source: CISA KEV</span>
+                  New exploited vulnerability reported by CISA
                 </CardTitle>
-                <Badge variant="destructive" className="font-mono">
+                <Badge variant="destructive" className="tabular-nums">
                   {KNOWN_SIGNAL.external_id}
                 </Badge>
               </div>
@@ -363,12 +357,12 @@ export default function DemoPage() {
                   ['Source', 'CISA Known Exploited Vulnerabilities catalog'],
                   [
                     'Details',
-                    `${KNOWN_SIGNAL.vendor_project} / ${KNOWN_SIGNAL.product} · CVSS ${KNOWN_SIGNAL.cvss_score} · EPSS ${(KNOWN_SIGNAL.epss_percentile * 100).toFixed(1)}th pct`,
+                    `${KNOWN_SIGNAL.vendor_project} ${KNOWN_SIGNAL.product}, CVSS ${KNOWN_SIGNAL.cvss_score}, exploitation likelier than ${(KNOWN_SIGNAL.epss_percentile * 100).toFixed(1)}% of all known CVEs (EPSS)`,
                   ],
                   ['Impact', 'Potentially reaches city services via shared remote-access infrastructure'],
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-lg bg-muted/60 p-3">
-                    <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{k}</dt>
+                    <dt className="text-xs font-medium text-muted-foreground">{k}</dt>
                     <dd className="mt-1 text-pretty">{v}</dd>
                   </div>
                 ))}
@@ -392,12 +386,12 @@ export default function DemoPage() {
         {sortedAgents.length > 0 && (
           <section className="animate-in fade-in-0 duration-500">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                <Bot className="h-3.5 w-3.5" aria-hidden />
-                Parallel agents
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                <Bot className="h-4 w-4" aria-hidden />
+                Five agents inspecting in parallel
               </h2>
-              <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                {finished}/{sortedAgents.length} reported
+              <span className="tabular-nums text-xs tabular-nums text-muted-foreground">
+                {finished} of {sortedAgents.length} reported
               </span>
             </div>
             <div className="stagger grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -413,30 +407,30 @@ export default function DemoPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Wrench className="h-4 w-4 text-brand-gold" aria-hidden />
-                Investigation summary
+                What Detroit should do now
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-lg bg-muted/60 p-3">
-                  <p className="font-mono text-2xl font-semibold tabular-nums">{sortedAgents.length}</p>
+                  <p className="tabular-nums text-2xl font-semibold tabular-nums">{sortedAgents.length}</p>
                   <p className="text-xs text-muted-foreground">Services inspected</p>
                 </div>
                 <div className="rounded-lg bg-status-critical/10 p-3">
-                  <p className="font-mono text-2xl font-semibold text-status-critical">{worst.seed.risk.priority}</p>
+                  <p className="tabular-nums text-2xl font-semibold text-status-critical">{worst.seed.risk.priority}</p>
                   <p className="truncate text-xs text-muted-foreground">Worst: {worst.seed.service_name}</p>
                 </div>
                 <div className="rounded-lg bg-muted/60 p-3">
-                  <p className="font-mono text-2xl font-semibold tabular-nums">{totalActions}</p>
+                  <p className="tabular-nums text-2xl font-semibold tabular-nums">{totalActions}</p>
                   <p className="text-xs text-muted-foreground">Action items</p>
                 </div>
               </div>
 
               <div>
-                <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Remediation plan
+                <p className="mb-2 text-sm font-semibold text-muted-foreground">
+                  Remediation plan, most urgent service first
                 </p>
-                <ol className="stagger max-h-72 space-y-1.5 overflow-y-auto pr-1">
+                <ol className="max-h-72 space-y-1.5 overflow-y-auto pr-1">
                   {sortedAgents.flatMap((a) =>
                     a.actions.map((action) => (
                       <li
@@ -494,10 +488,10 @@ export default function DemoPage() {
           <Card className="animate-in fade-in-0 duration-500">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Timeline
+                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                  What happened, and when
                 </CardTitle>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">{timeline.length} events</span>
+                <span className="tabular-nums text-xs tabular-nums text-muted-foreground">{timeline.length} events</span>
               </div>
             </CardHeader>
             <CardContent>
@@ -519,7 +513,7 @@ export default function DemoPage() {
                           <Icon className="h-3 w-3" aria-hidden />
                         </span>
                         <div className="min-w-0 pt-0.5">
-                          <span className="mr-2 font-mono text-xs tabular-nums text-muted-foreground">{e.time}</span>
+                          <span className="mr-2 tabular-nums text-xs tabular-nums text-muted-foreground">{e.time}</span>
                           <span className={cn('text-sm text-pretty', e.kind === 'alert' && 'text-status-at-risk')}>
                             {e.label}
                           </span>

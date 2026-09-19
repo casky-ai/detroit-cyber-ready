@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
+// Pinned to Detroit, so the clock is right on any presenter's laptop.
+const DETROIT_TIME: Intl.DateTimeFormatOptions = { hour12: false, timeZone: 'America/Detroit' };
+
 // The real wall clock, ticking every second, in big bold digits. Every
 // timeline event is stamped with this same clock at the moment it fires —
 // nothing about the demo's timing is scripted or faked, which is the point;
@@ -14,12 +17,12 @@ export function LiveClock({ className = '' }: { className?: string }) {
     return () => clearInterval(id);
   }, []);
 
-  const time = now.toLocaleTimeString('en-US', { hour12: false });
+  const time = now.toLocaleTimeString('en-US', DETROIT_TIME);
 
   return (
     <div
       suppressHydrationWarning
-      className={`font-mono text-5xl font-bold tabular-nums tracking-tight sm:text-7xl ${className}`}
+      className={`text-6xl font-extrabold tabular-nums tracking-[-0.03em] sm:text-8xl ${className}`}
     >
       {time}
     </div>
@@ -27,5 +30,5 @@ export function LiveClock({ className = '' }: { className?: string }) {
 }
 
 export function nowStamp(): string {
-  return new Date().toLocaleTimeString('en-US', { hour12: false });
+  return new Date().toLocaleTimeString('en-US', DETROIT_TIME);
 }

@@ -54,7 +54,6 @@ export default function SignalsFeedPage() {
   return (
     <PageContainer className="max-w-4xl">
       <PageHeader
-        eyebrow="Detect"
         title="Threat intelligence feed"
         description="Every signal is shown, whether or not it matched anything in Detroit's inventory. That is what proves this system filters rather than alarms."
       />
@@ -74,7 +73,7 @@ export default function SignalsFeedPage() {
               )}
             >
               {f.label}
-              {n !== null && <span className="ml-1.5 font-mono tabular-nums opacity-60">{n}</span>}
+              {n !== null && <span className="ml-1.5 tabular-nums opacity-60">{n}</span>}
             </button>
           );
         })}
@@ -98,7 +97,7 @@ export default function SignalsFeedPage() {
         </Card>
       )}
 
-      <div key={filter} className="stagger space-y-3">
+      <div key={filter} className="space-y-3">
         {visible?.map((s) => {
           const affectedServices = [...new Set(s.matches.map((m) => m.service_slug))];
           const matched = affectedServices.length > 0;
@@ -106,14 +105,14 @@ export default function SignalsFeedPage() {
             <Card key={s.id} className={cn('transition-shadow', matched && 'ring-status-at-risk/40')}>
               <CardHeader>
                 <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="font-mono text-sm">{s.external_id}</CardTitle>
+                  <CardTitle className="tabular-nums text-sm">{s.external_id}</CardTitle>
                   <Badge variant="outline" className="text-[10px]">
                     {s.source}
                   </Badge>
                   <Badge variant={s.provenance === 'live' ? 'default' : 'outline'} className="text-[10px]">
                     {s.provenance === 'live' ? 'Live' : 'Simulated'}
                   </Badge>
-                  <span className="ml-auto font-mono text-xs text-muted-foreground">
+                  <span className="ml-auto tabular-nums text-xs text-muted-foreground">
                     {new Date(s.published_at).toLocaleDateString()}
                   </span>
                 </div>

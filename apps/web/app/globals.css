@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
-  --font-heading: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Public Sans", "Public Sans Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --font-heading: "Public Sans", "Public Sans Fallback", ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -56,54 +56,55 @@
 
 :root,
 .dark {
-  /* Detroit Cyber Ready: dark by default, a SOC-dashboard aesthetic
-     rather than the shadcn default grayscale. Status colors below are the
-     actual semantic vocabulary the readiness board and investigation view
-     are built on. */
-  --background: oklch(0.16 0.02 255);
-  --foreground: oklch(0.96 0.005 255);
-  --card: oklch(0.21 0.02 255);
-  --card-foreground: oklch(0.96 0.005 255);
-  --popover: oklch(0.21 0.02 255);
-  --popover-foreground: oklch(0.96 0.005 255);
-  /* Gold, echoing the sun the Spirit of Detroit statue holds aloft —
-     the branding accent used for primary actions and headline moments. */
-  --primary: oklch(0.78 0.15 85);
-  --primary-foreground: oklch(0.18 0.02 85);
-  --brand-verdigris: oklch(0.6 0.1 165); /* the statue's oxidized-bronze green */
-  --brand-gold: oklch(0.78 0.15 85);
-  --secondary: oklch(0.27 0.02 255);
-  --secondary-foreground: oklch(0.96 0.005 255);
-  --muted: oklch(0.27 0.02 255);
-  --muted-foreground: oklch(0.68 0.02 255);
-  --accent: oklch(0.30 0.03 255);
-  --accent-foreground: oklch(0.96 0.005 255);
-  --destructive: oklch(0.6 0.22 25);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.62 0.19 255);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.19 0.02 255);
-  --sidebar-foreground: oklch(0.96 0.005 255);
-  --sidebar-primary: oklch(0.62 0.19 255);
-  --sidebar-primary-foreground: oklch(0.98 0.005 255);
-  --sidebar-accent: oklch(0.27 0.02 255);
-  --sidebar-accent-foreground: oklch(0.96 0.005 255);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.62 0.19 255);
+  /* Palette taken from the Spirit of Detroit statue itself: the night
+     patina of weathered bronze for surfaces, verdigris for the bronze, gilt
+     for the sphere the figure holds aloft, and marble for text, after the
+     plinth. Gilt is the single accent, reserved for primary actions and the
+     current step. */
+  --patina-night: #0f1b1d;
+  --background: var(--patina-night);
+  --foreground: #e9e5dc;
+  --card: #152427;
+  --card-foreground: #e9e5dc;
+  --popover: #152427;
+  --popover-foreground: #e9e5dc;
+  --primary: #e2b04a;
+  --primary-foreground: #1a1405;
+  --brand-verdigris: #4fa58c;
+  --brand-gold: #e2b04a;
+  --secondary: #1c2e31;
+  --secondary-foreground: #e9e5dc;
+  --muted: #1c2e31;
+  --muted-foreground: #9dafa9;
+  --accent: #223739;
+  --accent-foreground: #e9e5dc;
+  --destructive: #e5484d;
+  --border: rgb(233 229 220 / 10%);
+  --input: rgb(233 229 220 / 14%);
+  --ring: #e2b04a;
+  --chart-1: #4fa58c;
+  --chart-2: #e2b04a;
+  --chart-3: #9dafa9;
+  --chart-4: #ee8a3a;
+  --chart-5: #e5484d;
+  --radius: 0.625rem;
+  --sidebar: #152427;
+  --sidebar-foreground: #e9e5dc;
+  --sidebar-primary: #e2b04a;
+  --sidebar-primary-foreground: #1a1405;
+  --sidebar-accent: #1c2e31;
+  --sidebar-accent-foreground: #e9e5dc;
+  --sidebar-border: rgb(233 229 220 / 10%);
+  --sidebar-ring: #e2b04a;
 
   /* Status vocabulary: the whole readiness board and investigation view
-     are built on these four values. Never hardcode a color elsewhere for
-     "is this service OK" — use these. */
-  --status-ok: oklch(0.72 0.19 145);
-  --status-at-risk: oklch(0.78 0.17 75);
-  --status-critical: oklch(0.62 0.22 25);
-  --status-life-safety: oklch(0.62 0.22 25);
+     are built on these values. Never hardcode a color elsewhere for "is
+     this service OK"; use these. At-risk is pushed toward orange so it can
+     never be confused with the gilt accent. */
+  --status-ok: #52c47e;
+  --status-at-risk: #ee8a3a;
+  --status-critical: #e5484d;
+  --status-life-safety: #e5484d;
 }
 
 @layer base {
@@ -118,7 +119,7 @@
     color-scheme: dark;
   }
   ::selection {
-    background: oklch(0.78 0.15 85 / 35%);
+    background: rgb(226 176 74 / 35%);
   }
 }
 
@@ -134,8 +135,12 @@
     transform: translateY(0);
   }
 }
+@keyframes page-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 .page-enter {
-  animation: page-enter 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: page-fade 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* The blast-radius connector drawing itself from infrastructure to service. */
@@ -148,7 +153,7 @@
   animation: line-draw 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 300ms both;
 }
 
-/* Staggered reveal for lists of cards and rows. */
+/* The demo's one orchestrated moment: agents arriving one after another. */
 .stagger > * {
   animation: page-enter 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }

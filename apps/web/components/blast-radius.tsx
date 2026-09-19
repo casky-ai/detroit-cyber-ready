@@ -48,7 +48,7 @@ export function BlastRadiusPanel({
     <div className="rounded-xl bg-card p-5 ring-1 ring-foreground/10">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <div className="flex-1 animate-in fade-in-0 slide-in-from-left-4 rounded-lg bg-secondary px-4 py-3 text-center ring-1 ring-foreground/10 duration-500">
-          <p className="flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+          <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Server className="h-3.5 w-3.5" aria-hidden />
             {landedKind === 'infrastructure' ? 'Shared infrastructure' : 'Service'}
           </p>
@@ -57,7 +57,7 @@ export function BlastRadiusPanel({
 
         <div className="flex flex-row items-center justify-center gap-2 px-1 sm:flex-col sm:gap-1">
           <span
-            className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+            className={`rounded px-2 py-0.5 text-xs font-semibold ${
               hard ? 'bg-status-critical/20 text-status-critical' : 'bg-status-at-risk/20 text-status-at-risk'
             }`}
           >
@@ -75,7 +75,7 @@ export function BlastRadiusPanel({
         </div>
 
         <div className="flex-1 animate-in fade-in-0 slide-in-from-right-4 rounded-lg bg-status-critical/10 px-4 py-3 text-center ring-2 ring-status-critical/60 duration-500 [animation-delay:600ms] [animation-fill-mode:both]">
-          <p className="flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider text-status-critical">
+          <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-status-critical">
             <Siren className="h-3.5 w-3.5" aria-hidden />
             Reaches
           </p>

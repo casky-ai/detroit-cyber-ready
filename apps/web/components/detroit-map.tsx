@@ -36,9 +36,10 @@ const VIEW_H = 640;
 // example) would otherwise draw one marker on top of another. Points closer
 // than this are fanned out around their shared center.
 const CLUSTER_PX = 14;
-const FAN_RADIUS_PX = 26;
-const LABEL_FONT_PX = 12;
-const LABEL_CHAR_PX = 6.6;
+const FAN_RADIUS_PX = 32;
+// Sized for a projector at the back of an auditorium, not a laptop.
+const LABEL_FONT_PX = 17;
+const LABEL_CHAR_PX = 9.2;
 
 function project(lat: number, lon: number): { x: number; y: number } {
   const x = ((lon - BOUNDS.minLon) / (BOUNDS.maxLon - BOUNDS.minLon)) * VIEW_W;
@@ -104,7 +105,11 @@ function placeLabels(points: Array<Omit<Point, 'label'>>): Point[] {
       { label: { x: p.x + gap, y: p.y + 4, anchor: 'start' }, rect: { x1: p.x + gap, y1: p.y - h / 2, x2: p.x + gap + w, y2: p.y + h / 2 } },
       { label: { x: p.x - gap, y: p.y + 4, anchor: 'end' }, rect: { x1: p.x - gap - w, y1: p.y - h / 2, x2: p.x - gap, y2: p.y + h / 2 } },
     ];
-    const free = candidates.find((c) => !taken.some((t) => overlaps(t, c.rect))) ?? candidates[0];
+    const inView = (r: Rect) => r.x1 >= 4 && r.x2 <= VIEW_W - 4 && r.y1 >= 4 && r.y2 <= VIEW_H - 4;
+    const free =
+      candidates.find((c) => inView(c.rect) && !taken.some((t) => overlaps(t, c.rect))) ??
+      candidates.find((c) => inView(c.rect)) ??
+      candidates[0];
     taken.push(free.rect);
     placed.set(p.service.slug, free.label);
   }
@@ -124,7 +129,7 @@ export function DetroitMap({ services, selectedSlug, onSelect }: DetroitMapProps
     const spread = fanOut(raw).map((p) => ({
       ...p,
       status: computeServiceStatus(p.service.latest_investigation),
-      r: p.service.criticality === 'life-safety' ? 11 : 8,
+      r: p.service.criticality === 'life-safety' ? 14 : 10,
     }));
     return placeLabels(spread);
   }, [services]);
@@ -137,7 +142,7 @@ export function DetroitMap({ services, selectedSlug, onSelect }: DetroitMapProps
   }
 
   return (
-    <div className="relative h-[420px] w-full overflow-hidden rounded-xl border border-border bg-[oklch(0.13_0.02_255)] sm:h-[520px]">
+    <div className="relative aspect-[1000/640] w-full overflow-hidden rounded-xl border border-border bg-[#0a1416]">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         className="h-full w-full select-none"
@@ -160,11 +165,11 @@ export function DetroitMap({ services, selectedSlug, onSelect }: DetroitMapProps
         <path
           d={`M -20 ${VIEW_H - 60} Q ${VIEW_W * 0.3} ${VIEW_H - 20}, ${VIEW_W * 0.6} ${VIEW_H - 70} T ${VIEW_W + 20} ${VIEW_H - 90}`}
           fill="none"
-          stroke="oklch(0.55 0.1 240 / 0.3)"
+          stroke="rgb(79 165 140 / 0.22)"
           strokeWidth="28"
           strokeLinecap="round"
         />
-        <text x={VIEW_W - 150} y={VIEW_H - 28} fill="rgba(255,255,255,0.28)" fontSize="13" fontStyle="italic">
+        <text x={VIEW_W - 150} y={VIEW_H - 28} fill="rgba(255,255,255,0.28)" fontSize="16" fontStyle="italic">
           Detroit River
         </text>
         <rect width={VIEW_W} height={VIEW_H} fill="url(#dcr-vignette)" pointerEvents="none" />
@@ -208,7 +213,7 @@ export function DetroitMap({ services, selectedSlug, onSelect }: DetroitMapProps
                 cy={y}
                 r={r}
                 style={{ fill: STATUS_FILL[status], transformBox: 'fill-box', transformOrigin: 'center' }}
-                stroke={lifeSafety ? 'white' : 'rgba(255,255,255,0.6)'}
+                stroke={lifeSafety ? 'var(--foreground)' : 'rgb(233 229 220 / 0.55)'}
                 strokeWidth={lifeSafety ? 3 : 2}
                 className="transition-transform duration-200 ease-out group-hover:scale-125"
               />
@@ -218,9 +223,9 @@ export function DetroitMap({ services, selectedSlug, onSelect }: DetroitMapProps
                 textAnchor={label.anchor}
                 fontSize={LABEL_FONT_PX}
                 fontWeight={selected ? 700 : 600}
-                fill={selected ? 'var(--brand-gold)' : 'rgba(255,255,255,0.85)'}
+                fill={selected ? 'var(--brand-gold)' : 'rgb(233 229 220 / 0.88)'}
                 paintOrder="stroke"
-                stroke="oklch(0.13 0.02 255)"
+                stroke="#0a1416"
                 strokeWidth={4}
                 strokeLinejoin="round"
                 className="pointer-events-none transition-colors"

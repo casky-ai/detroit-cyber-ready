@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         sent: false,
-        reason: 'SLACK_WEBHOOK_URL is not configured yet — set it on Vercel to enable real delivery.',
+        reason: 'Slack delivery is off because SLACK_WEBHOOK_URL is not set. Add it in the Vercel project settings to send real alerts.',
         preview: buildSlackBlocks(body),
       },
       { status: 200 }

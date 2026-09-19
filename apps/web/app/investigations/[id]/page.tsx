@@ -44,7 +44,7 @@ const STEP_LABELS: Record<string, string> = {
 const STALE_TIMEOUT_MS = 3 * 60 * 1000;
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{children}</CardTitle>;
+  return <CardTitle className="text-sm font-semibold text-muted-foreground">{children}</CardTitle>;
 }
 
 function LoadingSkeleton() {
@@ -170,7 +170,7 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
         {service && <p className="w-full text-sm text-muted-foreground">{service.department}</p>}
       </header>
 
-      <div className="stagger space-y-4">
+      <div className="space-y-4">
         {signal && (
           <Card>
             <CardHeader>
@@ -182,7 +182,7 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
               </div>
             </CardHeader>
             <CardContent className="text-sm">
-              <p className="font-mono font-medium">{signal.external_id}</p>
+              <p className="tabular-nums font-medium">{signal.external_id}</p>
               <p className="mt-0.5 text-pretty text-muted-foreground">{signal.title}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {signal.vendor_project} / {signal.product}
@@ -194,7 +194,7 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
         {match && service && (
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Exposure path</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground">Exposure path</h2>
               <Badge variant="outline" className="text-[10px] text-muted-foreground">
                 Detroit inventory: simulated
               </Badge>
@@ -299,11 +299,11 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
               <SectionTitle>Recommended actions</SectionTitle>
             </CardHeader>
             <CardContent>
-              <ol className="stagger space-y-3">
+              <ol className="space-y-3">
                 {actions.map((a) => (
                   <li key={a.rank} className="text-sm">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary font-mono text-[11px] font-semibold text-primary-foreground">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary tabular-nums text-[11px] font-semibold text-primary-foreground">
                         {a.rank}
                       </span>
                       <span className="font-medium">{a.title}</span>

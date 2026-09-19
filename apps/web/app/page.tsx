@@ -3,13 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { cn } from 'cn';
-import { Activity, ArrowRight, Building2, MapPin, MousePointerClick, Radar, ShieldAlert, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { Activity, MapPin, MousePointerClick, Radar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DetroitMap } from '@/components/detroit-map';
-import { PageContainer, PageHeader } from '@/components/page-header';
+import { PageContainer } from '@/components/page-header';
 import type { ServiceSummary } from '@/lib/api-types';
 import { computeServiceStatus, STATUS_LABEL, type ServiceStatus } from '@/lib/status';
 
@@ -53,33 +53,60 @@ const STATUS_TEXT: Record<ServiceStatus, string> = {
   critical: 'text-status-critical',
 };
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  tone,
+function breakdown(critical: number, atRisk: number): string {
+  const parts = [critical > 0 && `${critical} at critical priority`, atRisk > 0 && `${atRisk} at risk`].filter(Boolean);
+  return parts.length ? `${parts.join(' and ')}. ` : '';
+}
+
+const CRITICALITY_ORDER: Record<ServiceSummary['criticality'], number> = {
+  'life-safety': 0,
+  critical: 1,
+  high: 2,
+  moderate: 3,
+  low: 4,
+};
+
+// The page's headline is the city's status, stated as a sentence a CISO
+// could read aloud, not a title plus a row of counters.
+function statusHeadline(services: ServiceSummary[]): string {
+  const flagged = services.filter((s) => computeServiceStatus(s.latest_investigation) !== 'ok').length;
+  if (flagged === 0) return `All ${services.length} city services are operational.`;
+  if (flagged === services.length) return `All ${services.length} city services need attention.`;
+  return `${flagged} of ${services.length} city services need attention.`;
+}
+
+// One cell per service, most critical first. Doubles as a compact legend
+// and as a second way to open a service without hunting on the map.
+function ServiceStrip({
+  services,
+  selectedSlug,
+  onSelect,
 }: {
-  icon: typeof Activity;
-  label: string;
-  value: number | null;
-  tone?: string;
+  services: ServiceSummary[];
+  selectedSlug?: string;
+  onSelect: (s: ServiceSummary) => void;
 }) {
+  const ordered = [...services].sort((a, b) => CRITICALITY_ORDER[a.criticality] - CRITICALITY_ORDER[b.criticality]);
   return (
-    <Card size="sm" className="gap-1">
-      <CardContent className="flex items-center gap-3">
-        <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg bg-muted', tone)}>
-          <Icon className="h-4 w-4" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          {value === null ? (
-            <Skeleton className="mb-1 h-6 w-8" />
-          ) : (
-            <p className={cn('font-mono text-2xl font-semibold tabular-nums leading-none', tone)}>{value}</p>
-          )}
-          <p className="mt-1 truncate text-xs text-muted-foreground">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex gap-1" role="list" aria-label="Service status, most critical first">
+      {ordered.map((s) => {
+        const status = computeServiceStatus(s.latest_investigation);
+        return (
+          <button
+            key={s.slug}
+            role="listitem"
+            title={`${s.name}: ${STATUS_LABEL[status]}`}
+            aria-label={`${s.name}, ${STATUS_LABEL[status]}`}
+            onClick={() => onSelect(s)}
+            className={cn(
+              'h-2.5 flex-1 rounded-[3px] outline-none transition-[opacity,transform] duration-200 hover:scale-y-150 focus-visible:ring-2 focus-visible:ring-ring',
+              STATUS_DOT[status],
+              selectedSlug && selectedSlug !== s.slug && 'opacity-45'
+            )}
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -89,8 +116,8 @@ function TechRow({ t }: { t: Tech }) {
       <span className="font-medium text-foreground">
         {t.vendor} {t.product}
       </span>
-      {t.version && <span className="font-mono text-[11px] text-muted-foreground">{t.version}</span>}
-      <span className="text-muted-foreground">· {t.exposure}</span>
+      {t.version && <span className="tabular-nums text-[11px] text-muted-foreground">{t.version}</span>}
+      <span className="text-muted-foreground">({t.exposure})</span>
     </p>
   );
 }
@@ -142,31 +169,33 @@ export default function ReadinessBoard() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="City readiness board"
-        title="Is Detroit ready right now?"
-        description="Know when your city is at risk, before an incident becomes an outage. Every marker is a city service at its real address."
-        actions={
-          <Badge variant="outline" className="gap-1.5 text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-status-at-risk" aria-hidden />
-            Simulated inventory
-          </Badge>
-        }
-      />
-
-      <div className="stagger mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard icon={Building2} label="City services monitored" value={services?.length ?? null} />
-        <StatCard icon={ShieldAlert} label="Critical priority" value={count('critical')} tone="text-status-critical" />
-        <StatCard icon={TriangleAlert} label="At risk" value={count('at-risk')} tone="text-status-at-risk" />
-        <StatCard icon={ShieldCheck} label="Operational" value={count('ok')} tone="text-status-ok" />
-      </div>
+      <section className="mb-7 max-w-3xl">
+        {services ? (
+          <h1 className="text-[2.25rem] font-extrabold leading-[1.05] tracking-[-0.025em] text-balance sm:text-[3.25rem]">
+            {statusHeadline(services)}
+          </h1>
+        ) : (
+          <Skeleton className="h-12 w-full max-w-xl sm:h-14" />
+        )}
+        <p className="mt-3 max-w-[62ch] text-[15px] leading-relaxed text-muted-foreground text-pretty">
+          {services && breakdown(count('critical') ?? 0, count('at-risk') ?? 0)}
+          Every marker is a city service at its real address. Select one to see what it runs and what it depends on.
+        </p>
+        <div className="mt-5 max-w-md">
+          {services ? (
+            <ServiceStrip services={services} selectedSlug={selected?.slug} onSelect={handleSelect} />
+          ) : (
+            <Skeleton className="h-2.5 w-full" />
+          )}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {services ? (
             <DetroitMap services={services} selectedSlug={selected?.slug} onSelect={handleSelect} />
           ) : (
-            <Skeleton className="h-[420px] w-full rounded-xl sm:h-[520px]" />
+            <Skeleton className="aspect-[1000/640] w-full rounded-xl" />
           )}
           <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
             {(['ok', 'at-risk', 'critical'] as const).map((s) => (
@@ -174,15 +203,16 @@ export default function ReadinessBoard() {
                 <span className={cn('h-2 w-2 rounded-full', STATUS_DOT[s])} /> {STATUS_LABEL[s]}
               </span>
             ))}
-            <span className="flex items-center gap-1.5 sm:ml-auto">
-              <span className="h-2.5 w-2.5 rounded-full border-2 border-white" /> Life-safety tier
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full border-2 border-foreground" /> Life-safety tier
             </span>
+            <span className="sm:ml-auto">Service inventory is simulated</span>
           </div>
         </div>
 
         <div className="lg:sticky lg:top-20 lg:self-start">
           {!selected ? (
-            <Card className="min-h-[240px] justify-center">
+            <Card className="justify-center py-8 lg:min-h-[240px]">
               <CardContent className="flex flex-col items-center gap-3 text-center">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                   <MousePointerClick className="h-5 w-5 text-muted-foreground" aria-hidden />
@@ -229,13 +259,13 @@ export default function ReadinessBoard() {
                       href={`/investigations/${selected.latest_investigation.id}`}
                       className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'ml-auto')}
                     >
-                      Open investigation <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      Open investigation
                     </Link>
                   </div>
                 )}
 
                 <div className="border-t border-border pt-3">
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="mb-2 text-sm font-semibold text-muted-foreground">
                     Declared assets
                   </p>
                   {!assets ? (
@@ -244,7 +274,7 @@ export default function ReadinessBoard() {
                       <Skeleton className="h-12 w-full" />
                     </div>
                   ) : (
-                    <div className="stagger space-y-2 text-xs">
+                    <div className="space-y-2 text-xs">
                       {assets.own_technology.map((t, i) => (
                         <div key={i} className="rounded-lg border border-border p-2.5">
                           <TechRow t={t} />
@@ -307,14 +337,14 @@ export default function ReadinessBoard() {
               </div>
             ) : liveSignals.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                No signals polled yet. The poll cron writes the <code className="font-mono">signals</code> table this
+                No signals polled yet. The poll cron writes the <code>signals</code> table this
                 panel reads from.
               </p>
             ) : (
-              <ul className="stagger divide-y divide-border/60">
+              <ul className="divide-y divide-border/60">
                 {liveSignals.slice(0, 5).map((s) => (
                   <li key={s.id} className="flex items-center gap-3 py-2 text-xs first:pt-0 last:pb-0">
-                    <span className="w-32 shrink-0 font-mono text-muted-foreground">{s.external_id}</span>
+                    <span className="w-32 shrink-0 tabular-nums text-muted-foreground">{s.external_id}</span>
                     <span className="min-w-0 flex-1 truncate">{s.title}</span>
                     {s.matches.length > 0 ? (
                       <Badge variant="outline" className="shrink-0 text-[10px] text-status-at-risk">
@@ -331,7 +361,7 @@ export default function ReadinessBoard() {
               href="/signals"
               className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
-              View full feed <ArrowRight className="h-3 w-3" aria-hidden />
+              See the full threat feed
             </Link>
           </CardContent>
         </Card>
@@ -350,8 +380,8 @@ export default function ReadinessBoard() {
           </CardHeader>
           <CardContent className="text-xs text-pretty text-muted-foreground">
             Synthetic scanning and OSINT-style indicators, stored the same way live signals are. Not fetched from a
-            live scanner; see the <code className="font-mono">SurfaceSource</code> contract in{' '}
-            <code className="font-mono">packages/signals</code>.
+            live scanner; see the <code>SurfaceSource</code> contract in{' '}
+            <code>packages/signals</code>.
           </CardContent>
         </Card>
       </section>

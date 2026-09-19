@@ -27,8 +27,8 @@ export function RiskBars({ components, score }: RiskBarsProps) {
           <div key={key}>
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{label}</span>
-              <span className="font-mono tabular-nums text-muted-foreground">
-                {(raw * 100).toFixed(0)}% · +{contribution.toFixed(1)}
+              <span className="tabular-nums text-muted-foreground">
+                {(raw * 100).toFixed(0)}%, adds {contribution.toFixed(1)}
               </span>
             </div>
             <Progress value={(raw / max) * 100} className="h-1.5" />
@@ -37,7 +37,7 @@ export function RiskBars({ components, score }: RiskBarsProps) {
       })}
       <div className="flex items-baseline justify-between border-t border-border pt-3 text-sm font-medium">
         <span>Total risk score</span>
-        <span className="font-mono tabular-nums">
+        <span className="tabular-nums">
           <span className="text-2xl font-semibold">{score}</span>
           <span className="text-muted-foreground">/100</span>
         </span>

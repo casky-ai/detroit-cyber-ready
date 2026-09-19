@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { cn } from 'cn';
-import { ArrowRight, ClipboardList, ShieldAlert, Siren } from 'lucide-react';
+import { ClipboardList, ShieldAlert, Siren } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -43,7 +43,7 @@ function Stat({ icon: Icon, label, value, tone }: { icon: typeof Siren; label: s
           {value === null ? (
             <Skeleton className="mb-1 h-6 w-8" />
           ) : (
-            <p className={cn('font-mono text-2xl font-semibold tabular-nums leading-none', tone)}>{value}</p>
+            <p className={cn('tabular-nums text-2xl font-semibold tabular-nums leading-none', tone)}>{value}</p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">{label}</p>
         </div>
@@ -69,12 +69,11 @@ export default function HistoryPage() {
   return (
     <PageContainer>
       <PageHeader
-        eyebrow="History"
-        title="Every investigation, on the record"
-        description="Every investigation this deployment has run, newest first. This is what repeatability looks like across signals, services, and time."
+        title="Every investigation, on the record."
+        description="Newest first. Each row is one city service checked against one threat signal. Open a row for the exposure path, risk score, and action plan."
       />
 
-      <div className="stagger mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Stat icon={ClipboardList} label="Investigations run" value={items?.length ?? null} />
         <Stat icon={Siren} label="P1 priority" value={p1} tone="text-status-critical" />
         <Stat icon={ShieldAlert} label="Life-safety escalations" value={escalated} tone="text-brand-gold" />
@@ -91,7 +90,7 @@ export default function HistoryPage() {
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <p className="text-sm text-muted-foreground">No investigations yet.</p>
             <Link href="/demo" className={buttonVariants({ size: 'sm' })}>
-              Run the live demo <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              Run the live demo
             </Link>
           </div>
         ) : (
@@ -106,7 +105,7 @@ export default function HistoryPage() {
                 <TableHead className="hidden pr-4 text-right text-xs text-muted-foreground lg:table-cell">Started</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="stagger">
+            <TableBody>
               {items.map((inv) => (
                 <TableRow
                   key={inv.id}
@@ -139,18 +138,18 @@ export default function HistoryPage() {
                   <TableCell className="hidden max-w-[280px] truncate text-muted-foreground md:table-cell">
                     {inv.signal ? (
                       <>
-                        <span className="font-mono text-xs">{inv.signal.external_id}</span>{' '}
+                        <span className="tabular-nums text-xs">{inv.signal.external_id}</span>{' '}
                         <span className="text-xs">{inv.signal.title}</span>
                       </>
                     ) : (
                       'Signal unavailable'
                     )}
                   </TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">{inv.risk_score ?? '-'}</TableCell>
+                  <TableCell className="text-right tabular-nums">{inv.risk_score ?? '-'}</TableCell>
                   <TableCell className={cn('hidden text-xs capitalize sm:table-cell', STATUS_TONE[inv.status] ?? 'text-muted-foreground')}>
                     {inv.status}
                   </TableCell>
-                  <TableCell className="hidden pr-4 text-right font-mono text-xs text-muted-foreground lg:table-cell">
+                  <TableCell className="hidden pr-4 text-right tabular-nums text-xs text-muted-foreground lg:table-cell">
                     {new Date(inv.created_at).toLocaleString()}
                   </TableCell>
                 </TableRow>
