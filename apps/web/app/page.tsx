@@ -204,16 +204,8 @@ export default function ReadinessStory() {
       const res = await fetch('/api/alerts/slack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signal: { ...demo.signal, source: 'cisa-kev' },
-          timeline: Object.entries(times).map(([n, time]) => ({ time, label: `Step ${n}`, kind: 'system' })),
-          investigations: demo.investigations.map((s) => ({
-            service_name: s.service_name,
-            priority: s.risk.priority,
-            risk_score: s.risk.score,
-            escalated: s.risk.escalated,
-          })),
-        }),
+        // The server reads everything else from the stored investigations.
+        body: JSON.stringify({ investigation_ids: demo.investigations.map((s) => s.investigation_id) }),
       });
       const result = await res.json();
       setAlert(result.sent ? { state: 'sent' } : { state: 'not-sent', reason: result.reason });
